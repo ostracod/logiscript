@@ -14,6 +14,8 @@ script_t *importScript(int8_t *path) {
         free(output);
         return NULL;
     }
+    // TODO: Parse topLevelFunction.
+    
     return output;
 }
 
