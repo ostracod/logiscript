@@ -67,8 +67,54 @@ int8_t characterIsEndOfLine(int8_t character) {
     return (character == '\n' || character == 0 || character == '#');
 }
 
+int8_t isFirstIdentifierCharacter(int8_t character) {
+    return ((character >= 'a' && character <= 'z')
+            || (character >= 'A' && character <= 'Z')
+            || character == '_');
+}
+
+int8_t isIdentifierCharacter(int8_t character) {
+    return (isFirstIdentifierCharacter(character)
+            || (character >= '0' && character <= '9'));
+}
+
+void bodyPosSeekEndOfIdentifier(bodyPos_t *bodyPos) {
+    while (true) {
+        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+        if (!isIdentifierCharacter(tempCharacter)) {
+            break;
+        }
+        bodyPos->index += 1;
+    }
+}
+
+int64_t getDistanceToBodyPos(bodyPos_t *startBodyPos, bodyPos_t *endBodyPos) {
+    return endBodyPos->index - startBodyPos->index;
+}
+
+int8_t *getBodyPosPointer(bodyPos_t *bodyPos) {
+    return bodyPos->script->body + bodyPos->index;
+}
+
+baseExpression_t *createIdentifierExpression(int8_t *name, int64_t length) {
+    identifierExpression_t *output = malloc(sizeof(identifierExpression_t));
+    output->base.type = EXPRESSION_TYPE_IDENTIFIER;
+    output->name = mallocText(name, length);
+    return (baseExpression_t *)output;
+}
+
 baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
-    // TODO: Implement.
+    bodyPos_t *bodyPos = parser->bodyPos;
+    bodyPosSkipWhitespace(bodyPos);
+    int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+    if (isFirstIdentifierCharacter(tempCharacter)) {
+        bodyPos_t startBodyPos = *bodyPos;
+        bodyPosSeekEndOfIdentifier(bodyPos);
+        int8_t *tempText = getBodyPosPointer(&startBodyPos);
+        int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
+        return createIdentifierExpression(tempText, tempLength);
+    }
+    // TODO: Handle more types of expressions.
     
     return NULL;
 }
@@ -76,8 +122,33 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
 // If endCharacter is -1, then this function will parse
 // expressions until the end of a line.
 void parseExpressionList(vector_t *destination, parser_t *parser, int8_t endCharacter) {
-    // TODO: Implement.
-    
+    bodyPos_t *bodyPos = parser->bodyPos;
+    createEmptyVector(destination, sizeof(baseExpression_t *));
+    while (true) {
+        bodyPosSkipWhitespace(bodyPos);
+        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+        if (endCharacter < 0) {
+            if (characterIsEndOfLine(tempCharacter)) {
+                break;
+            }
+        } else {
+            if (tempCharacter == endCharacter) {
+                bodyPos->index += 1;
+                break;
+            }
+        }
+        if (destination->length > 0) {
+            if (tempCharacter == ',') {
+                bodyPos->index += 1;
+            } else {
+                // TODO: Report parsing errors.
+                
+                return;
+            }
+        }
+        baseExpression_t *tempExpression = parseExpression(parser, 99);
+        pushVectorElement(destination, &tempExpression);
+    }
 }
 
 baseStatement_t *parseStatement(int8_t *hasReachedEnd, parser_t *parser) {

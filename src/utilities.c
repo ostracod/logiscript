@@ -6,6 +6,13 @@
 #include <wordexp.h>
 #include "utilities.h"
 
+int8_t *mallocText(int8_t *text, int64_t length) {
+    int8_t *output = malloc(length + 1);
+    memcpy(output, text, length);
+    output[length] = 0;
+    return output;
+}
+
 int8_t *mallocRealpath(int8_t *path) {
     int64_t tempLength = strlen((char *)path);
     int8_t *tempText = malloc((tempLength + 1) * 2);
