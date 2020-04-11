@@ -49,6 +49,8 @@ typedef struct variableExpression {
     scopeVariable_t *variable;
 } variableExpression_t;
 
+typedef struct namespace namespace_t;
+
 typedef struct namespaceExpression {
     baseExpression_t base;
     namespace_t *namespace;

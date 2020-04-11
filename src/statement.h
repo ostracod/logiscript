@@ -5,7 +5,7 @@
 #include "vector.h"
 #include "script.h"
 #include "parse.h"
-#include "expresion.h"
+#include "expression.h"
 
 #define STATEMENT_TYPE_INVOCATION 1
 #define STATEMENT_TYPE_NAMESPACE_IMPORT 2
@@ -13,7 +13,7 @@
 
 typedef struct baseStatement {
     int8_t type;
-    bodyLine_t bodyLine;
+    bodyPos_t bodyPos;
 } baseStatement_t;
 
 typedef struct invocationStatement {
