@@ -78,10 +78,25 @@ int8_t isIdentifierCharacter(int8_t character) {
             || (character >= '0' && character <= '9'));
 }
 
+int8_t isNumberCharacter(int8_t character) {
+    return ((character >= '0' && character <= '9')
+            || character == '.');
+}
+
 void bodyPosSeekEndOfIdentifier(bodyPos_t *bodyPos) {
     while (true) {
         int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
         if (!isIdentifierCharacter(tempCharacter)) {
+            break;
+        }
+        bodyPos->index += 1;
+    }
+}
+
+void bodyPosSeekEndOfNumber(bodyPos_t *bodyPos) {
+    while (true) {
+        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+        if (!isNumberCharacter(tempCharacter)) {
             break;
         }
         bodyPos->index += 1;
@@ -103,16 +118,38 @@ baseExpression_t *createIdentifierExpression(int8_t *name, int64_t length) {
     return (baseExpression_t *)output;
 }
 
+baseExpression_t *createConstantExpression(value_t value) {
+    constantExpression_t *output = malloc(sizeof(constantExpression_t));
+    output->base.type = EXPRESSION_TYPE_CONSTANT;
+    output->value = value;
+    return (baseExpression_t *)output;
+}
+
 baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
     bodyPos_t *bodyPos = parser->bodyPos;
     bodyPosSkipWhitespace(bodyPos);
-    int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
-    if (isFirstIdentifierCharacter(tempCharacter)) {
+    int8_t firstCharacter = bodyPosGetCharacter(bodyPos);
+    if (isFirstIdentifierCharacter(firstCharacter)) {
         bodyPos_t startBodyPos = *bodyPos;
         bodyPosSeekEndOfIdentifier(bodyPos);
         int8_t *tempText = getBodyPosPointer(&startBodyPos);
         int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
         return createIdentifierExpression(tempText, tempLength);
+    }
+    if (isNumberCharacter(firstCharacter)) {
+        bodyPos_t startBodyPos = *bodyPos;
+        bodyPosSeekEndOfNumber(bodyPos);
+        // TODO: Detect malformed numbers.
+        int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
+        int8_t tempText[tempLength + 1];
+        memcpy(tempText, getBodyPosPointer(&startBodyPos), tempLength);
+        tempText[tempLength] = 0;
+        double tempNumber;
+        sscanf((char *)tempText, "%lf", &tempNumber);
+        value_t tempValue;
+        tempValue.type = VALUE_TYPE_NUMBER;
+        tempValue.numberValue = tempNumber;
+        return createConstantExpression(tempValue);
     }
     // TODO: Handle more types of expressions.
     
