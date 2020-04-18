@@ -42,6 +42,8 @@ typedef struct customFunctionHandle {
     alias_t *aliasList;
 } customFunctionHandle_t;
 
+builtInFunction_t *findBuiltInFunctionByName(int8_t *name);
+
 // FUNCTION_HEADER_FILE
 #endif
 

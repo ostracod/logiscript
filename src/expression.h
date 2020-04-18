@@ -81,6 +81,9 @@ typedef struct invocationExpression {
     vector_t argumentList; // Vector of pointers to baseExpression_t.
 } invocationExpression_t;
 
+baseExpression_t *createIdentifierExpression(int8_t *name, int64_t length);
+baseExpression_t *createConstantExpression(value_t value);
+
 // EXPRESSION_HEADER_FILE
 #endif
 

@@ -111,20 +111,6 @@ int8_t *getBodyPosPointer(bodyPos_t *bodyPos) {
     return bodyPos->script->body + bodyPos->index;
 }
 
-baseExpression_t *createIdentifierExpression(int8_t *name, int64_t length) {
-    identifierExpression_t *output = malloc(sizeof(identifierExpression_t));
-    output->base.type = EXPRESSION_TYPE_IDENTIFIER;
-    output->name = mallocText(name, length);
-    return (baseExpression_t *)output;
-}
-
-baseExpression_t *createConstantExpression(value_t value) {
-    constantExpression_t *output = malloc(sizeof(constantExpression_t));
-    output->base.type = EXPRESSION_TYPE_CONSTANT;
-    output->value = value;
-    return (baseExpression_t *)output;
-}
-
 baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
     bodyPos_t *bodyPos = parser->bodyPos;
     bodyPosSkipWhitespace(bodyPos);
