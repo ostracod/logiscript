@@ -61,6 +61,7 @@ typedef struct aliasedValue {
 } aliasedValue_t;
 
 value_t copyValue(value_t value);
+value_t convertValueToString(value_t value, int8_t shouldCopy);
 
 #include "function.h"
 #include "variable.h"

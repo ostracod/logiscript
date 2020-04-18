@@ -37,7 +37,14 @@ void invokeBuiltInFunction(
     aliasedValue_t *argumentList,
     int32_t argumentCount
 ) {
-    // TODO: Implement.
+    // TODO: Validate argumentCount.
+    
+    int32_t functionNumber = builtInFunction->number;
+    if (functionNumber == BUILT_IN_FUNCTION_PRINT) {
+        value_t stringValue = convertValueToString(argumentList[0].value, false);
+        printf("%s\n", stringValue.heapValue->vector.data);
+    }
+    // TODO: Implement more built-in functions.
     
 }
 
