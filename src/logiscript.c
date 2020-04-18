@@ -16,7 +16,6 @@ int main(int argc, const char *argv[]) {
         printf("Script file is missing!\n");
         return 1;
     }
-    printf("Script contents:\n%s\n", script->body);
     return 0;
 }
 

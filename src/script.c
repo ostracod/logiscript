@@ -10,6 +10,7 @@
 #include "variable.h"
 #include "parse.h"
 #include "resolve.h"
+#include "evaluate.h"
 
 script_t *importScript(int8_t *path) {
     script_t *output = malloc(sizeof(script_t));
@@ -40,6 +41,7 @@ script_t *importScript(int8_t *path) {
     parser.bodyPos = &bodyPos;
     parseStatementList(&(topLevelFunction->statementList), &parser);
     resolveIdentifiersInFunction(topLevelFunction);
+    evaluateScript(output);
     return output;
 }
 

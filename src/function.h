@@ -4,6 +4,7 @@
 
 #include "vector.h"
 #include "variable.h"
+#include "value.h"
 
 #define FUNCTION_TYPE_BUILT_IN 1
 #define FUNCTION_TYPE_CUSTOM 2
@@ -39,10 +40,21 @@ typedef struct customFunction {
 
 typedef struct customFunctionHandle {
     customFunction_t *function;
+    // May be NULL if the function does not have any alias variables.
     alias_t *aliasList;
 } customFunctionHandle_t;
 
 builtInFunction_t *findBuiltInFunctionByName(int8_t *name);
+heapValue_t *invokeFunctionHandle(
+    customFunctionHandle_t *functionHandle,
+    aliasedValue_t *argumentList,
+    int32_t argumentCount
+);
+void invokeFunction(
+    value_t functionValue,
+    aliasedValue_t *argumentList,
+    int32_t argumentCount
+);
 
 // FUNCTION_HEADER_FILE
 #endif

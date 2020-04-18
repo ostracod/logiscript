@@ -5,6 +5,7 @@
 #include <string.h>
 #include "utilities.h"
 #include "function.h"
+#include "evaluate.h"
 
 builtInFunction_t builtInFunctionSet[] = {
     {{FUNCTION_TYPE_BUILT_IN, 2}, (int8_t *)"SET", BUILT_IN_FUNCTION_SET},
@@ -29,6 +30,55 @@ builtInFunction_t *findBuiltInFunctionByName(int8_t *name) {
         }
     }
     return NULL;
+}
+
+void invokeBuiltInFunction(
+    builtInFunction_t *builtInFunction,
+    aliasedValue_t *argumentList,
+    int32_t argumentCount
+) {
+    // TODO: Implement.
+    
+}
+
+heapValue_t *invokeFunctionHandle(
+    customFunctionHandle_t *functionHandle,
+    aliasedValue_t *argumentList,
+    int32_t argumentCount
+) {
+    customFunction_t *customFunction = functionHandle->function;
+    for (int64_t index = 0; index < customFunction->statementList.length; index++) {
+        baseStatement_t *tempStatement;
+        getVectorElement(&tempStatement, &(customFunction->statementList), index);
+        evaluateStatement(tempStatement);
+    }
+    // TODO: Return frame.
+    return NULL;
+}
+
+void invokeFunction(
+    value_t functionValue,
+    aliasedValue_t *argumentList,
+    int32_t argumentCount
+) {
+    if (functionValue.type == VALUE_TYPE_BUILT_IN_FUNCTION) {
+        invokeBuiltInFunction(
+            functionValue.builtInFunction,
+            argumentList,
+            argumentCount
+        );
+        return;
+    }
+    if (functionValue.type == VALUE_TYPE_CUSTOM_FUNCTION) {
+        invokeFunctionHandle(
+            functionValue.heapValue->customFunctionHandle,
+            argumentList,
+            argumentCount
+        );
+        return;
+    }
+    // TODO: Throw an error if the given value is not a function.
+    
 }
 
 

@@ -3,8 +3,6 @@
 #define VALUE_HEADER_FILE
 
 #include "vector.h"
-#include "function.h"
-#include "variable.h"
 
 #define VALUE_TYPE_VOID 1
 #define VALUE_TYPE_NUMBER 2
@@ -56,6 +54,16 @@ typedef struct alias {
     heapValue_t *container;
     int64_t index;
 } alias_t;
+
+typedef struct aliasedValue {
+    value_t value;
+    alias_t alias;
+} aliasedValue_t;
+
+value_t copyValue(value_t value);
+
+#include "function.h"
+#include "variable.h"
 
 // VALUE_HEADER_FILE
 #endif

@@ -5,6 +5,7 @@
 #include <string.h>
 #include "resolve.h"
 #include "expression.h"
+#include "statement.h"
 #include "function.h"
 
 baseExpression_t *resolveIdentifierExpression(identifierExpression_t *identifierExpression) {
