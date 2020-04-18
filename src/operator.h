@@ -2,6 +2,8 @@
 #ifndef OPERATOR_HEADER_FILE
 #define OPERATOR_HEADER_FILE
 
+#include "value.h"
+
 #define OPERATOR_ARRANGEMENT_UNARY 1
 #define OPERATOR_ARRANGEMENT_BINARY 2
 
@@ -38,6 +40,10 @@ typedef struct operator {
     int8_t arrangement;
     int8_t precedence;
 } operator_t;
+
+int8_t textMatchesOperator(int8_t *text, operator_t *operator);
+operator_t *getOperatorInText(int8_t *text, int8_t operatorArrangement);
+aliasedValue_t calculateUnaryOperator(operator_t *operator, aliasedValue_t operand);
 
 // OPERATOR_HEADER_FILE
 #endif

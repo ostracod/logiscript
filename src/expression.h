@@ -83,6 +83,7 @@ typedef struct invocationExpression {
 
 baseExpression_t *createIdentifierExpression(int8_t *name, int64_t length);
 baseExpression_t *createConstantExpression(value_t value);
+baseExpression_t *createUnaryExpression(operator_t *operator, baseExpression_t *operand);
 
 // EXPRESSION_HEADER_FILE
 #endif

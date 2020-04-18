@@ -6,20 +6,36 @@
 #include "evaluate.h"
 #include "function.h"
 #include "expression.h"
+#include "operator.h"
 #include "value.h"
 
 aliasedValue_t evaluateExpression(baseExpression_t *expression) {
     aliasedValue_t output;
-    if (expression->type == EXPRESSION_TYPE_CONSTANT) {
-        constantExpression_t *constantExpression = (constantExpression_t *)expression;
-        output.value = copyValue(constantExpression->value);
-        output.alias.container = NULL;
-        return output;
-    }
-    // TODO: Evaluate other types of expressions.
-    
     output.value.type = VALUE_TYPE_VOID;
     output.alias.container = NULL;
+    switch (expression->type) {
+        case EXPRESSION_TYPE_CONSTANT:
+        {
+            constantExpression_t *constantExpression = (constantExpression_t *)expression;
+            output.value = copyValue(constantExpression->value);
+            break;
+        }
+        case EXPRESSION_TYPE_UNARY:
+        {
+            unaryExpression_t *unaryExpression = (unaryExpression_t *)expression;
+            operator_t *tempOperator = unaryExpression->operator;
+            aliasedValue_t tempOperand = evaluateExpression(unaryExpression->operand);
+            output = calculateUnaryOperator(tempOperator, tempOperand);
+            break;
+        }
+        // TODO: Evaluate other types of expressions.
+        
+        default:
+        {
+            break;
+        }
+    }
+    
     return output;
 }
 

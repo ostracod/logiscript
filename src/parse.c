@@ -5,6 +5,7 @@
 #include <string.h>
 #include "utilities.h"
 #include "parse.h"
+#include "operator.h"
 #include "expression.h"
 #include "statement.h"
 
@@ -111,35 +112,51 @@ int8_t *getBodyPosPointer(bodyPos_t *bodyPos) {
     return bodyPos->script->body + bodyPos->index;
 }
 
+operator_t *bodyPosGetOperator(bodyPos_t *bodyPos, int8_t operatorArrangement) {
+    int8_t *tempText = getBodyPosPointer(bodyPos);
+    operator_t *output = getOperatorInText(tempText, operatorArrangement);
+    if (output == NULL) {
+        return NULL;
+    }
+    bodyPos->index += strlen((char *)(output->text));
+    return output;
+}
+
 baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
     bodyPos_t *bodyPos = parser->bodyPos;
     bodyPosSkipWhitespace(bodyPos);
-    int8_t firstCharacter = bodyPosGetCharacter(bodyPos);
-    if (isFirstIdentifierCharacter(firstCharacter)) {
-        bodyPos_t startBodyPos = *bodyPos;
-        bodyPosSeekEndOfIdentifier(bodyPos);
-        int8_t *tempText = getBodyPosPointer(&startBodyPos);
-        int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
-        return createIdentifierExpression(tempText, tempLength);
-    }
-    if (isNumberCharacter(firstCharacter)) {
-        bodyPos_t startBodyPos = *bodyPos;
-        bodyPosSeekEndOfNumber(bodyPos);
-        // TODO: Detect malformed numbers.
-        int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
-        int8_t tempText[tempLength + 1];
-        memcpy(tempText, getBodyPosPointer(&startBodyPos), tempLength);
-        tempText[tempLength] = 0;
-        double tempNumber;
-        sscanf((char *)tempText, "%lf", &tempNumber);
-        value_t tempValue;
-        tempValue.type = VALUE_TYPE_NUMBER;
-        tempValue.numberValue = tempNumber;
-        return createConstantExpression(tempValue);
+    baseExpression_t *output = NULL;
+    operator_t *tempOperator = bodyPosGetOperator(bodyPos, OPERATOR_ARRANGEMENT_UNARY);
+    if (tempOperator == NULL) {
+        int8_t firstCharacter = bodyPosGetCharacter(bodyPos);
+        if (isFirstIdentifierCharacter(firstCharacter)) {
+            bodyPos_t startBodyPos = *bodyPos;
+            bodyPosSeekEndOfIdentifier(bodyPos);
+            int8_t *tempText = getBodyPosPointer(&startBodyPos);
+            int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
+            output = createIdentifierExpression(tempText, tempLength);
+        } else if (isNumberCharacter(firstCharacter)) {
+            bodyPos_t startBodyPos = *bodyPos;
+            bodyPosSeekEndOfNumber(bodyPos);
+            // TODO: Detect malformed numbers.
+            int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
+            int8_t tempText[tempLength + 1];
+            memcpy(tempText, getBodyPosPointer(&startBodyPos), tempLength);
+            tempText[tempLength] = 0;
+            double tempNumber;
+            sscanf((char *)tempText, "%lf", &tempNumber);
+            value_t tempValue;
+            tempValue.type = VALUE_TYPE_NUMBER;
+            tempValue.numberValue = tempNumber;
+            output = createConstantExpression(tempValue);
+        }
+    } else {
+        baseExpression_t *tempOperand = parseExpression(parser, 0);
+        output = createUnaryExpression(tempOperator, tempOperand);
     }
     // TODO: Handle more types of expressions.
     
-    return NULL;
+    return output;
 }
 
 // If endCharacter is -1, then this function will parse

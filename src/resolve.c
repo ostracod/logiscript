@@ -24,17 +24,30 @@ baseExpression_t *resolveIdentifierExpression(identifierExpression_t *identifier
 
 void resolveIdentifiersInExpression(baseExpression_t **expression) {
     baseExpression_t *tempExpression = *expression;
-    if (tempExpression->type == EXPRESSION_TYPE_IDENTIFIER) {
-        baseExpression_t *tempResult = resolveIdentifierExpression(
-            (identifierExpression_t *)tempExpression
-        );
-        if (tempResult != NULL) {
-            *expression = tempResult;
-            return;
+    switch (tempExpression->type) {
+        case EXPRESSION_TYPE_IDENTIFIER:
+        {
+            baseExpression_t *tempResult = resolveIdentifierExpression(
+                (identifierExpression_t *)tempExpression
+            );
+            if (tempResult != NULL) {
+                *expression = tempResult;
+            }
+            break;
+        }
+        case EXPRESSION_TYPE_UNARY:
+        {
+            unaryExpression_t *unaryExpression = (unaryExpression_t *)tempExpression;
+            resolveIdentifiersInExpression(&(unaryExpression->operand));
+            break;
+        }
+        // TODO: Resolve identifiers in other expression types.
+        
+        default:
+        {
+            break;
         }
     }
-    // TODO: Resolve identifiers in other expression types.
-    
 }
 
 void resolveIdentifiersInStatement(baseStatement_t *statement) {

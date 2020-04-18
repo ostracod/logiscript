@@ -20,4 +20,12 @@ baseExpression_t *createConstantExpression(value_t value) {
     return (baseExpression_t *)output;
 }
 
+baseExpression_t *createUnaryExpression(operator_t *operator, baseExpression_t *operand) {
+    unaryExpression_t *output = malloc(sizeof(unaryExpression_t));
+    output->base.type = EXPRESSION_TYPE_UNARY;
+    output->operator = operator;
+    output->operand = operand;
+    return (baseExpression_t *)output;
+}
+
 
