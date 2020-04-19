@@ -34,6 +34,9 @@ typedef struct scope {
 
 void scopeAddVariable(scope_t *scope, int8_t *name);
 scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name);
+heapValue_t *scopeCreateFrame(scope_t *scope);
+aliasedValue_t readFrameVariable(heapValue_t *frame, int32_t index);
+void writeFrameVariable(heapValue_t *frame, int32_t index, value_t value);
 
 // VARIABLE_HEADER_FILE
 #endif

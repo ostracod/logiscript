@@ -86,4 +86,13 @@ value_t convertValueToString(value_t value, int8_t shouldCopy) {
     return output;
 }
 
+void writeValueToAlias(alias_t alias, value_t value) {
+    heapValue_t *heapValue = alias.container;
+    if (heapValue->type == VALUE_TYPE_FRAME) {
+        writeFrameVariable(heapValue, (int32_t)alias.index, value);
+    }
+    // TODO: Write to more types of heap values.
+    
+}
+
 

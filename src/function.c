@@ -39,13 +39,25 @@ void invokeBuiltInFunction(
 ) {
     // TODO: Validate argumentCount.
     
-    int32_t functionNumber = builtInFunction->number;
-    if (functionNumber == BUILT_IN_FUNCTION_PRINT) {
-        value_t stringValue = convertValueToString(argumentList[0].value, false);
-        printf("%s\n", stringValue.heapValue->vector.data);
+    switch (builtInFunction->number) {
+        case BUILT_IN_FUNCTION_SET:
+        {
+            writeValueToAlias(argumentList[0].alias, argumentList[1].value);
+            break;
+        }
+        case BUILT_IN_FUNCTION_PRINT:
+        {
+            value_t stringValue = convertValueToString(argumentList[0].value, false);
+            printf("%s\n", stringValue.heapValue->vector.data);
+            break;
+        }
+        // TODO: Implement more built-in functions.
+        
+        default:
+        {
+            break;
+        }
     }
-    // TODO: Implement more built-in functions.
-    
 }
 
 heapValue_t *invokeFunctionHandle(
@@ -54,13 +66,13 @@ heapValue_t *invokeFunctionHandle(
     int32_t argumentCount
 ) {
     customFunction_t *customFunction = functionHandle->function;
+    heapValue_t *tempFrame = scopeCreateFrame(&(customFunction->scope));
     for (int64_t index = 0; index < customFunction->statementList.length; index++) {
         baseStatement_t *tempStatement;
         getVectorElement(&tempStatement, &(customFunction->statementList), index);
-        evaluateStatement(tempStatement);
+        evaluateStatement(tempFrame, tempStatement);
     }
-    // TODO: Return frame.
-    return NULL;
+    return tempFrame;
 }
 
 void invokeFunction(

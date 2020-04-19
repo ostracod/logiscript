@@ -5,7 +5,7 @@
 #include "script.h"
 #include "statement.h"
 
-void evaluateStatement(baseStatement_t *statement);
+void evaluateStatement(heapValue_t *frame, baseStatement_t *statement);
 void evaluateScript(script_t *script);
 
 // EVALUATE_HEADER_FILE
