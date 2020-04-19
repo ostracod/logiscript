@@ -29,8 +29,11 @@ typedef struct scope {
     // Function argument variables will preceed any other
     // variables in the scope. Argument variables will be
     // populated in the same order as provided by invocation.
-    vector_t variableList; // Vector of scopeVariable_t.
+    vector_t variableList; // Vector of pointers to scopeVariable_t.
 } scope_t;
+
+void scopeAddVariable(scope_t *scope, int8_t *name);
+scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name);
 
 // VARIABLE_HEADER_FILE
 #endif

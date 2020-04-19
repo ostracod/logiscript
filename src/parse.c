@@ -156,7 +156,14 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
     } else {
         bodyPosSkipOperator(bodyPos, tempOperator);
         baseExpression_t *tempOperand = parseExpression(parser, 0);
-        output = createUnaryExpression(tempOperator, tempOperand);
+        if (tempOperator->number == OPERATOR_DECLARE) {
+            // TODO: Make sure that tempOperand is an identifier expression.
+            identifierExpression_t *identifierExpression = (identifierExpression_t *)tempOperand;
+            scopeAddVariable(&(parser->customFunction->scope), identifierExpression->name);
+            output = tempOperand;
+        } else {
+            output = createUnaryExpression(tempOperator, tempOperand);
+        }
     }
     while (true) {
         bodyPosSkipWhitespace(bodyPos);

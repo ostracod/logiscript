@@ -20,6 +20,13 @@ baseExpression_t *createConstantExpression(value_t value) {
     return (baseExpression_t *)output;
 }
 
+baseExpression_t *createVariableExpression(scopeVariable_t *variable) {
+    variableExpression_t *output = malloc(sizeof(variableExpression_t));
+    output->base.type = EXPRESSION_TYPE_VARIABLE;
+    output->variable = variable;
+    return (baseExpression_t *)output;
+}
+
 baseExpression_t *createUnaryExpression(operator_t *operator, baseExpression_t *operand) {
     unaryExpression_t *output = malloc(sizeof(unaryExpression_t));
     output->base.type = EXPRESSION_TYPE_UNARY;
