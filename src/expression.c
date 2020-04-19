@@ -28,4 +28,17 @@ baseExpression_t *createUnaryExpression(operator_t *operator, baseExpression_t *
     return (baseExpression_t *)output;
 }
 
+baseExpression_t *createBinaryExpression(
+    operator_t *operator,
+    baseExpression_t *operand1,
+    baseExpression_t *operand2
+) {
+    binaryExpression_t *output = malloc(sizeof(binaryExpression_t));
+    output->base.type = EXPRESSION_TYPE_BINARY;
+    output->operator = operator;
+    output->operand1 = operand1;
+    output->operand2 = operand2;
+    return (baseExpression_t *)output;
+}
+
 

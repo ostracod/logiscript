@@ -69,11 +69,58 @@ aliasedValue_t calculateUnaryOperator(operator_t *operator, aliasedValue_t opera
     aliasedValue_t output;
     output.value.type = VALUE_TYPE_VOID;
     output.alias.container = NULL;
+    double tempNumber = operand.value.numberValue;
     switch (operator->number) {
         case OPERATOR_NEGATE:
         {
             output.value.type = VALUE_TYPE_NUMBER;
-            output.value.numberValue = -operand.value.numberValue;
+            output.value.numberValue = -tempNumber;
+            break;
+        }
+        // TODO: Calculate with more unary operators.
+        
+        default:
+        {
+            break;
+        }
+    }
+    return output;
+}
+
+aliasedValue_t calculateBinaryOperator(
+    operator_t *operator,
+    aliasedValue_t operand1,
+    aliasedValue_t operand2
+) {
+    aliasedValue_t output;
+    output.value.type = VALUE_TYPE_VOID;
+    output.alias.container = NULL;
+    double tempNumber1 = operand1.value.numberValue;
+    double tempNumber2 = operand2.value.numberValue;
+    switch (operator->number) {
+        case OPERATOR_ADD:
+        {
+            // TODO: Support concatenation.
+            output.value.type = VALUE_TYPE_NUMBER;
+            output.value.numberValue = tempNumber1 + tempNumber2;
+            break;
+        }
+        case OPERATOR_SUBTRACT:
+        {
+            output.value.type = VALUE_TYPE_NUMBER;
+            output.value.numberValue = tempNumber1 - tempNumber2;
+            break;
+        }
+        case OPERATOR_MULTIPLY:
+        {
+            output.value.type = VALUE_TYPE_NUMBER;
+            output.value.numberValue = tempNumber1 * tempNumber2;
+            break;
+        }
+        case OPERATOR_DIVIDE:
+        {
+            output.value.type = VALUE_TYPE_NUMBER;
+            output.value.numberValue = tempNumber1 / tempNumber2;
             break;
         }
         // TODO: Calculate with more unary operators.

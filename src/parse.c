@@ -118,8 +118,11 @@ operator_t *bodyPosGetOperator(bodyPos_t *bodyPos, int8_t operatorArrangement) {
     if (output == NULL) {
         return NULL;
     }
-    bodyPos->index += strlen((char *)(output->text));
     return output;
+}
+
+void bodyPosSkipOperator(bodyPos_t *bodyPos, operator_t *operator) {
+    bodyPos->index += strlen((char *)(operator->text));
 }
 
 baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
@@ -151,8 +154,23 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             output = createConstantExpression(tempValue);
         }
     } else {
+        bodyPosSkipOperator(bodyPos, tempOperator);
         baseExpression_t *tempOperand = parseExpression(parser, 0);
         output = createUnaryExpression(tempOperator, tempOperand);
+    }
+    while (true) {
+        bodyPosSkipWhitespace(bodyPos);
+        int8_t hasProcessedExpression = false;
+        tempOperator = bodyPosGetOperator(bodyPos, OPERATOR_ARRANGEMENT_BINARY);
+        if (tempOperator != NULL && tempOperator->precedence < precedence) {
+            bodyPosSkipOperator(bodyPos, tempOperator);
+            baseExpression_t *tempOperand = parseExpression(parser, tempOperator->precedence);
+            output = createBinaryExpression(tempOperator, output, tempOperand);
+            hasProcessedExpression = true;
+        }
+        if (!hasProcessedExpression) {
+            break;
+        }
     }
     // TODO: Handle more types of expressions.
     
@@ -205,7 +223,7 @@ baseStatement_t *parseStatement(int8_t *hasReachedEnd, parser_t *parser) {
     invocationStatement_t *output = malloc(sizeof(invocationStatement_t));
     output->base.type = STATEMENT_TYPE_INVOCATION;
     output->base.bodyPos = startBodyPos;
-    output->function = parseExpression(parser, 99);
+    output->function = parseExpression(parser, 3);
     bodyPosSkipWhitespace(bodyPos);
     parseExpressionList(&(output->argumentList), parser, -1);
     // TODO: Report parsing errors.

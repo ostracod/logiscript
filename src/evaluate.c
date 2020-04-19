@@ -28,6 +28,15 @@ aliasedValue_t evaluateExpression(baseExpression_t *expression) {
             output = calculateUnaryOperator(tempOperator, tempOperand);
             break;
         }
+        case EXPRESSION_TYPE_BINARY:
+        {
+            binaryExpression_t *binaryExpression = (binaryExpression_t *)expression;
+            operator_t *tempOperator = binaryExpression->operator;
+            aliasedValue_t tempOperand1 = evaluateExpression(binaryExpression->operand1);
+            aliasedValue_t tempOperand2 = evaluateExpression(binaryExpression->operand2);
+            output = calculateBinaryOperator(tempOperator, tempOperand1, tempOperand2);
+            break;
+        }
         // TODO: Evaluate other types of expressions.
         
         default:

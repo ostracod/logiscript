@@ -41,6 +41,13 @@ void resolveIdentifiersInExpression(baseExpression_t **expression) {
             resolveIdentifiersInExpression(&(unaryExpression->operand));
             break;
         }
+        case EXPRESSION_TYPE_BINARY:
+        {
+            binaryExpression_t *binaryExpression = (binaryExpression_t *)tempExpression;
+            resolveIdentifiersInExpression(&(binaryExpression->operand1));
+            resolveIdentifiersInExpression(&(binaryExpression->operand2));
+            break;
+        }
         // TODO: Resolve identifiers in other expression types.
         
         default:
