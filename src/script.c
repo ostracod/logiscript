@@ -25,6 +25,7 @@ script_t *importScript(int8_t *path) {
     topLevelFunction->base.type = FUNCTION_TYPE_CUSTOM;
     topLevelFunction->base.argumentAmount = 0;
     scope_t *scope = &(topLevelFunction->scope);
+    scope->parentScope = NULL;
     scope->aliasVariableAmount = 0;
     createEmptyVector(&(scope->variableList), sizeof(scopeVariable_t *));
     output->topLevelFunction = topLevelFunction;

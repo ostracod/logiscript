@@ -13,7 +13,10 @@ typedef struct scopeVariable {
     int32_t parentScopeIndex;
 } scopeVariable_t;
 
+typedef struct scope scope_t;
+
 typedef struct scope {
+    scope_t *parentScope;
     int32_t aliasVariableAmount;
     // Function argument variables will preceed any other
     // variables in the scope. Argument variables will be
@@ -21,10 +24,9 @@ typedef struct scope {
     vector_t variableList; // Vector of pointers to scopeVariable_t.
 } scope_t;
 
-void scopeAddVariable(scope_t *scope, int8_t *name);
+scopeVariable_t *scopeAddVariable(scope_t *scope, int8_t *name, int32_t parentScopeIndex);
 scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name);
-heapValue_t *scopeCreateFrame(scope_t *scope);
-void writeFrameVariable(heapValue_t *frame, int32_t index, value_t value);
+alias_t getAliasToFrameVariable(heapValue_t *frame, int32_t index);
 
 // VARIABLE_HEADER_FILE
 #endif

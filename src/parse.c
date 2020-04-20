@@ -169,6 +169,7 @@ void parseIdentifierList(vector_t *destination, parser_t *parser, int8_t endChar
 
 baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
     // TODO: Report parsing errors.
+    customFunction_t *lastCustomFunction = parser->customFunction;
     vector_t identifierList;
     parseIdentifierList(&identifierList, parser, -1);
     bodyPosSeekNextLine(parser->bodyPos);
@@ -176,15 +177,16 @@ baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
     customFunction_t *customFunction = malloc(sizeof(customFunction_t));
     customFunction->base.type = FUNCTION_TYPE_CUSTOM;
     customFunction->base.argumentAmount = argumentAmount;
-    customFunction->scope.aliasVariableAmount = 0;
-    createEmptyVector(&(customFunction->scope.variableList), sizeof(scopeVariable_t *));
+    scope_t *tempScope = &(customFunction->scope);
+    tempScope->parentScope = &(lastCustomFunction->scope);
+    tempScope->aliasVariableAmount = 0;
+    createEmptyVector(&(tempScope->variableList), sizeof(scopeVariable_t *));
     for (int32_t index = 0; index < argumentAmount; index++) {
         int8_t *tempIdentifier;
         getVectorElement(&tempIdentifier, &identifierList, index);
-        scopeAddVariable(&(customFunction->scope), tempIdentifier);
+        scopeAddVariable(tempScope, tempIdentifier, -1);
     }
     cleanUpVector(&identifierList);
-    customFunction_t *lastCustomFunction = parser->customFunction;
     parser->customFunction = customFunction;
     parseStatementList(&(customFunction->statementList), parser, '}');
     parser->customFunction = lastCustomFunction;
@@ -237,7 +239,11 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
         if (tempOperator->number == OPERATOR_DECLARE) {
             // TODO: Make sure that tempOperand is an identifier expression.
             identifierExpression_t *identifierExpression = (identifierExpression_t *)tempOperand;
-            scopeAddVariable(&(parser->customFunction->scope), identifierExpression->name);
+            scopeAddVariable(
+                &(parser->customFunction->scope),
+                identifierExpression->name,
+                -1
+            );
             output = tempOperand;
         } else {
             output = createUnaryExpression(tempOperator, tempOperand);

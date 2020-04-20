@@ -22,16 +22,9 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
         case EXPRESSION_TYPE_VARIABLE:
         {
             variableExpression_t *variableExpression = (variableExpression_t *)expression;
-            alias_t tempAlias;
-            tempAlias.container = frame;
-            tempAlias.index = variableExpression->variable->scopeIndex;
-            value_t tempValue = readValueFromAlias(tempAlias);
-            if (tempValue.type == VALUE_TYPE_ALIAS) {
-                output = tempValue;
-            } else {
-                output.type = VALUE_TYPE_ALIAS;
-                output.alias = tempAlias;
-            }
+            int32_t tempScopeIndex = variableExpression->variable->scopeIndex;
+            output.type = VALUE_TYPE_ALIAS;
+            output.alias = getAliasToFrameVariable(frame, tempScopeIndex);
             break;
         }
         case EXPRESSION_TYPE_UNARY:
@@ -54,6 +47,7 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
         case EXPRESSION_TYPE_FUNCTION:
         {
             heapValue_t *tempHandle = createFunctionHandle(
+                frame,
                 ((customFunctionExpression_t *)expression)->customFunction
             );
             output = createValueFromHeapValue(tempHandle);
@@ -88,7 +82,10 @@ void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
 }
 
 void evaluateScript(script_t *script) {
-    heapValue_t *tempHandle = createFunctionHandle(script->topLevelFunction);
+    heapValue_t *tempHandle = createFunctionHandle(
+        NULL,
+        script->topLevelFunction
+    );
     script->globalFrame = invokeFunctionHandle(tempHandle, NULL, 0);
 }
 

@@ -62,12 +62,56 @@ void invokeBuiltInFunction(
     }
 }
 
-heapValue_t *createFunctionHandle(customFunction_t *customFunction) {
+heapValue_t *createFunctionHandle(heapValue_t *frame, customFunction_t *customFunction) {
     customFunctionHandle_t *tempHandle = malloc(sizeof(customFunctionHandle_t));
     tempHandle->function = customFunction;
-    tempHandle->aliasList = NULL; // TODO: Populate this.
+    scope_t *tempScope = &(customFunction->scope);
+    int32_t tempLength = tempScope->aliasVariableAmount;
+    tempHandle->aliasList = malloc(sizeof(alias_t) * tempLength);
+    int32_t scopeIndex = 0;
+    int32_t aliasIndex = 0;
+    while (scopeIndex < tempScope->variableList.length && aliasIndex < tempLength) {
+        scopeVariable_t *tempVariable;
+        getVectorElement(&tempVariable, &(tempScope->variableList), scopeIndex);
+        scopeIndex += 1;
+        if (tempVariable->parentScopeIndex < 0) {
+            continue;
+        }
+        tempHandle->aliasList[aliasIndex] = getAliasToFrameVariable(
+            frame,
+            tempVariable->parentScopeIndex
+        );
+        aliasIndex += 1;
+    }
     heapValue_t *output = createHeapValue(VALUE_TYPE_CUSTOM_FUNCTION);
     output->customFunctionHandle = tempHandle;
+    return output;
+}
+
+heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
+    customFunction_t *customFunction = functionHandle->function;
+    alias_t *aliasList = functionHandle->aliasList;
+    scope_t *tempScope = &(customFunction->scope);
+    int32_t tempLength = (int32_t)(tempScope->variableList.length);
+    value_t *frameVariableList = malloc(sizeof(value_t) * tempLength);
+    int32_t scopeIndex = 0;
+    int32_t aliasIndex = 0;
+    while (scopeIndex < tempLength) {
+        scopeVariable_t *scopeVariable;
+        getVectorElement(&scopeVariable, &(tempScope->variableList), scopeIndex);
+        value_t tempValue;
+        if (scopeVariable->parentScopeIndex >= 0) {
+            tempValue.type = VALUE_TYPE_ALIAS;
+            tempValue.alias = aliasList[aliasIndex];
+            aliasIndex += 1;
+        } else {
+            tempValue.type = VALUE_TYPE_VOID;
+        }
+        frameVariableList[scopeIndex] = tempValue;
+        scopeIndex += 1;
+    }
+    heapValue_t *output = createHeapValue(VALUE_TYPE_FRAME);
+    output->frameVariableList = frameVariableList;
     return output;
 }
 
@@ -77,12 +121,11 @@ heapValue_t *invokeFunctionHandle(
     int32_t argumentCount
 ) {
     customFunctionHandle_t *tempHandle = functionHandle->customFunctionHandle;
-    customFunction_t *customFunction = tempHandle->function;
-    // TODO: Populate alias variables in frame.
-    heapValue_t *tempFrame = scopeCreateFrame(&(customFunction->scope));
+    heapValue_t *tempFrame = functionHandleCreateFrame(tempHandle);
     for (int32_t index = 0; index < argumentCount; index++) {
         tempFrame->frameVariableList[index] = argumentList[index];
     }
+    customFunction_t *customFunction = tempHandle->function;
     for (int64_t index = 0; index < customFunction->statementList.length; index++) {
         baseStatement_t *tempStatement;
         getVectorElement(&tempStatement, &(customFunction->statementList), index);

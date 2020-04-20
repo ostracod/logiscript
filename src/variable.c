@@ -7,12 +7,16 @@
 #include "function.h"
 #include "variable.h"
 
-void scopeAddVariable(scope_t *scope, int8_t *name) {
-    scopeVariable_t *tempVariable = malloc(sizeof(scopeVariable_t));
-    tempVariable->name = name;
-    tempVariable->scopeIndex = scope->variableList.length;
-    tempVariable->parentScopeIndex = -1;
-    pushVectorElement(&(scope->variableList), &tempVariable);
+scopeVariable_t *scopeAddVariable(scope_t *scope, int8_t *name, int32_t parentScopeIndex) {
+    scopeVariable_t *output = malloc(sizeof(scopeVariable_t));
+    output->name = name;
+    output->scopeIndex = scope->variableList.length;
+    output->parentScopeIndex = parentScopeIndex;
+    pushVectorElement(&(scope->variableList), &output);
+    if (parentScopeIndex >= 0) {
+        scope->aliasVariableAmount += 1;
+    }
+    return output;
 }
 
 scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name) {
@@ -26,24 +30,16 @@ scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name) {
     return NULL;
 }
 
-heapValue_t *scopeCreateFrame(scope_t *scope) {
-    int32_t tempLength = (int32_t)(scope->variableList.length);
-    value_t *frameVariableList = malloc(sizeof(value_t) * tempLength);
-    for (int32_t index = 0; index < tempLength; index++) {
-        value_t tempValue;
-        tempValue.type = VALUE_TYPE_VOID;
-        frameVariableList[index] = tempValue;
+alias_t getAliasToFrameVariable(heapValue_t *frame, int32_t index) {
+    alias_t tempAlias;
+    tempAlias.container = frame;
+    tempAlias.index = index;
+    value_t tempValue = readValueFromAlias(tempAlias);
+    if (tempValue.type == VALUE_TYPE_ALIAS) {
+        return tempValue.alias;
+    } else {
+        return tempAlias;
     }
-    // TODO: Populate alias variables.
-    
-    heapValue_t *output = createHeapValue(VALUE_TYPE_FRAME);
-    output->frameVariableList = frameVariableList;
-    return output;
-}
-
-void writeFrameVariable(heapValue_t *frame, int32_t index, value_t value) {
-    // TODO: Handle aliases.
-    frame->frameVariableList[index] = value;
 }
 
 

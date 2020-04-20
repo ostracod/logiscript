@@ -106,7 +106,7 @@ void writeValueToAlias(alias_t alias, value_t value) {
     heapValue_t *heapValue = alias.container;
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
-        writeFrameVariable(heapValue, index, value);
+        heapValue->frameVariableList[index] = value;
     }
     // TODO: Write to more types of heap values.
     
