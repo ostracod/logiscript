@@ -6,6 +6,7 @@
 #include "utilities.h"
 #include "function.h"
 #include "evaluate.h"
+#include "error.h"
 
 builtInFunction_t builtInFunctionSet[] = {
     {{FUNCTION_TYPE_BUILT_IN, 2}, (int8_t *)"SET", BUILT_IN_FUNCTION_SET},
@@ -52,6 +53,24 @@ void invokeBuiltInFunction(
             if (tempCondition.numberValue != 0) {
                 value_t tempHandle = resolveAliasValue(argumentList[1]);
                 invokeFunctionHandle(tempHandle.heapValue, NULL, 0);
+            }
+            break;
+        }
+        case BUILT_IN_FUNCTION_THROW:
+        {
+            value_t tempChannel = resolveAliasValue(argumentList[0]);
+            value_t tempValue = resolveAliasValue(argumentList[1]);
+            throwError((int32_t)(tempChannel.numberValue), tempValue);
+            break;
+        }
+        case BUILT_IN_FUNCTION_CATCH:
+        {
+            value_t tempChannel = resolveAliasValue(argumentList[1]);
+            value_t tempHandle = resolveAliasValue(argumentList[2]);
+            invokeFunctionHandle(tempHandle.heapValue, NULL, 0);
+            if (hasThrownError && (int32_t)(tempChannel.numberValue) == thrownErrorChannel) {
+                writeValueToAliasValue(argumentList[0], thrownErrorValue);
+                hasThrownError = false;
             }
             break;
         }
@@ -139,6 +158,9 @@ heapValue_t *invokeFunctionHandle(
         baseStatement_t *tempStatement;
         getVectorElement(&tempStatement, &(customFunction->statementList), index);
         evaluateStatement(tempFrame, tempStatement);
+        if (hasThrownError) {
+            break;
+        }
     }
     return tempFrame;
 }

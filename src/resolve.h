@@ -10,11 +10,6 @@
 #define FUNCTION_TYPE_CONSTANT 3
 #define VOID_TYPE_CONSTANT 4
 
-#define TYPE_ERROR_CONSTANT 0
-#define NUMBER_ERROR_CONSTANT 1
-#define DATA_ERROR_CONSTANT 2
-#define MISSING_ERROR_CONSTANT 3
-
 typedef struct numberConstant {
     int8_t *name;
     double value;

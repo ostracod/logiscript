@@ -8,6 +8,7 @@
 #include "statement.h"
 #include "function.h"
 #include "variable.h"
+#include "error.h"
 
 numberConstant_t numberConstantSet[] = {
     {(int8_t *)"TRUE", 1},

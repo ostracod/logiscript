@@ -11,8 +11,10 @@
 #include "parse.h"
 #include "resolve.h"
 #include "evaluate.h"
+#include "error.h"
 
 script_t *importScript(int8_t *path) {
+    hasThrownError = false;
     script_t *output = malloc(sizeof(script_t));
     output->path = mallocRealpath(path);
     output->body = readEntireFile(&(output->bodyLength), output->path);
