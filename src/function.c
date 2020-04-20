@@ -56,6 +56,14 @@ void invokeBuiltInFunction(
             }
             break;
         }
+        case BUILT_IN_FUNCTION_LOOP:
+        {
+            value_t tempHandle = resolveAliasValue(argumentList[0]);
+            while (!hasThrownError) {
+                invokeFunctionHandle(tempHandle.heapValue, NULL, 0);
+            }
+            break;
+        }
         case BUILT_IN_FUNCTION_THROW:
         {
             value_t tempChannel = resolveAliasValue(argumentList[0]);

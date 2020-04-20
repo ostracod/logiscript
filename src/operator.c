@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 #include "utilities.h"
 #include "operator.h"
 
@@ -120,8 +121,52 @@ value_t calculateBinaryOperator(
         }
         case OPERATOR_DIVIDE:
         {
+            // TODO: Check for division by zero.
             output.type = VALUE_TYPE_NUMBER;
             output.numberValue = tempNumber1 / tempNumber2;
+            break;
+        }
+        case OPERATOR_MODULUS:
+        {
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = fmod(tempNumber1, tempNumber2);
+            break;
+        }
+        case OPERATOR_EQUAL:
+        {
+            // TODO: Test equality of strings and lists.
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = (tempNumber1 == tempNumber2);
+            break;
+        }
+        case OPERATOR_NOT_EQUAL:
+        {
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = (tempNumber1 != tempNumber2);
+            break;
+        }
+        case OPERATOR_GREATER:
+        {
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = (tempNumber1 > tempNumber2);
+            break;
+        }
+        case OPERATOR_GREATER_OR_EQUAL:
+        {
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = (tempNumber1 >= tempNumber2);
+            break;
+        }
+        case OPERATOR_LESS:
+        {
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = (tempNumber1 < tempNumber2);
+            break;
+        }
+        case OPERATOR_LESS_OR_EQUAL:
+        {
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = (tempNumber1 <= tempNumber2);
             break;
         }
         // TODO: Calculate with more unary operators.
