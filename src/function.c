@@ -46,6 +46,15 @@ void invokeBuiltInFunction(
             writeValueToAliasValue(argumentList[0], tempValue);
             break;
         }
+        case BUILT_IN_FUNCTION_IF:
+        {
+            value_t tempCondition = resolveAliasValue(argumentList[0]);
+            if (tempCondition.numberValue != 0) {
+                value_t tempHandle = resolveAliasValue(argumentList[1]);
+                invokeFunctionHandle(tempHandle.heapValue, NULL, 0);
+            }
+            break;
+        }
         case BUILT_IN_FUNCTION_PRINT:
         {
             value_t tempValue = resolveAliasValue(argumentList[0]);

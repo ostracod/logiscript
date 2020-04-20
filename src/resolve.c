@@ -9,6 +9,31 @@
 #include "function.h"
 #include "variable.h"
 
+numberConstant_t numberConstantSet[] = {
+    {(int8_t *)"TRUE", 1},
+    {(int8_t *)"FALSE", 0},
+    {(int8_t *)"NUMBER_TYPE", NUMBER_TYPE_CONSTANT},
+    {(int8_t *)"STRING_TYPE", STRING_TYPE_CONSTANT},
+    {(int8_t *)"LIST_TYPE", LIST_TYPE_CONSTANT},
+    {(int8_t *)"FUNCTION_TYPE", FUNCTION_TYPE_CONSTANT},
+    {(int8_t *)"VOID_TYPE", VOID_TYPE_CONSTANT},
+    {(int8_t *)"TYPE_ERROR", TYPE_ERROR_CONSTANT},
+    {(int8_t *)"NUMBER_ERROR", NUMBER_ERROR_CONSTANT},
+    {(int8_t *)"DATA_ERROR", DATA_ERROR_CONSTANT},
+    {(int8_t *)"MISSING_ERROR", MISSING_ERROR_CONSTANT}
+};
+
+numberConstant_t *findNumberConstantByName(int8_t *name) {
+    int32_t tempLength = sizeof(numberConstantSet) / sizeof(*numberConstantSet);
+    for (int32_t index = 0; index < tempLength; index++) {
+        numberConstant_t *tempConstant = numberConstantSet + index;
+        if (strcmp((char *)name, (char *)tempConstant->name) == 0) {
+            return tempConstant;
+        }
+    }
+    return NULL;
+}
+
 scopeVariable_t *resolveIdentifierInScope(scope_t *scope, int8_t *identifier) {
     scopeVariable_t *tempVariable = scopeFindVariable(scope, identifier);
     if (tempVariable != NULL) {
@@ -38,6 +63,18 @@ baseExpression_t *resolveIdentifierExpression(
         value_t tempValue;
         tempValue.type = VALUE_TYPE_BUILT_IN_FUNCTION;
         tempValue.builtInFunction = tempFunction;
+        return createConstantExpression(tempValue);
+    }
+    numberConstant_t *tempConstant = findNumberConstantByName(tempName);
+    if (tempConstant != NULL) {
+        value_t tempValue;
+        tempValue.type = VALUE_TYPE_NUMBER;
+        tempValue.numberValue = tempConstant->value;
+        return createConstantExpression(tempValue);
+    }
+    if (strcmp((char *)tempName, "VOID") == 0) {
+        value_t tempValue;
+        tempValue.type = VALUE_TYPE_VOID;
         return createConstantExpression(tempValue);
     }
     // TODO: Resolve other types of identifiers.
