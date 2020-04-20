@@ -28,12 +28,11 @@ scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name) {
 
 heapValue_t *scopeCreateFrame(scope_t *scope) {
     int32_t tempLength = (int32_t)(scope->variableList.length);
-    frameVariable_t *frameVariableList = malloc(sizeof(frameVariable_t) * tempLength);
+    value_t *frameVariableList = malloc(sizeof(value_t) * tempLength);
     for (int32_t index = 0; index < tempLength; index++) {
-        frameVariable_t tempVariable;
-        tempVariable.type = FRAME_VARIABLE_TYPE_VALUE;
-        tempVariable.value.type = VALUE_TYPE_VOID;
-        frameVariableList[index] = tempVariable;
+        value_t tempValue;
+        tempValue.type = VALUE_TYPE_VOID;
+        frameVariableList[index] = tempValue;
     }
     // TODO: Populate alias variables.
     
@@ -42,20 +41,9 @@ heapValue_t *scopeCreateFrame(scope_t *scope) {
     return output;
 }
 
-aliasedValue_t readFrameVariable(heapValue_t *frame, int32_t index) {
-    frameVariable_t *frameVariable = frame->frameVariableList + index;
-    aliasedValue_t output;
-    // TODO: Handle alias variables.
-    output.value = frameVariable->value;
-    output.alias.container = frame;
-    output.alias.index = index;
-    return output;
-}
-
 void writeFrameVariable(heapValue_t *frame, int32_t index, value_t value) {
-    frameVariable_t *frameVariable = frame->frameVariableList + index;
-    // TODO: Handle alias variables.
-    frameVariable->value = value;
+    // TODO: Handle aliases.
+    frame->frameVariableList[index] = value;
 }
 
 

@@ -43,12 +43,8 @@ typedef struct operator {
 
 int8_t textMatchesOperator(int8_t *text, operator_t *operator);
 operator_t *getOperatorInText(int8_t *text, int8_t operatorArrangement);
-aliasedValue_t calculateUnaryOperator(operator_t *operator, aliasedValue_t operand);
-aliasedValue_t calculateBinaryOperator(
-    operator_t *operator,
-    aliasedValue_t operand1,
-    aliasedValue_t operand2
-);
+value_t calculateUnaryOperator(operator_t *operator, value_t operand);
+value_t calculateBinaryOperator(operator_t *operator, value_t operand1, value_t operand2);
 
 // OPERATOR_HEADER_FILE
 #endif

@@ -65,16 +65,16 @@ operator_t *getOperatorInText(int8_t *text, int8_t operatorArrangement) {
     return NULL;
 }
 
-aliasedValue_t calculateUnaryOperator(operator_t *operator, aliasedValue_t operand) {
-    aliasedValue_t output;
-    output.value.type = VALUE_TYPE_VOID;
-    output.alias.container = NULL;
-    double tempNumber = operand.value.numberValue;
+value_t calculateUnaryOperator(operator_t *operator, value_t operand) {
+    value_t output;
+    output.type = VALUE_TYPE_VOID;
+    operand = resolveAliasValue(operand);
+    double tempNumber = operand.numberValue;
     switch (operator->number) {
         case OPERATOR_NEGATE:
         {
-            output.value.type = VALUE_TYPE_NUMBER;
-            output.value.numberValue = -tempNumber;
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = -tempNumber;
             break;
         }
         // TODO: Calculate with more unary operators.
@@ -87,40 +87,41 @@ aliasedValue_t calculateUnaryOperator(operator_t *operator, aliasedValue_t opera
     return output;
 }
 
-aliasedValue_t calculateBinaryOperator(
+value_t calculateBinaryOperator(
     operator_t *operator,
-    aliasedValue_t operand1,
-    aliasedValue_t operand2
+    value_t operand1,
+    value_t operand2
 ) {
-    aliasedValue_t output;
-    output.value.type = VALUE_TYPE_VOID;
-    output.alias.container = NULL;
-    double tempNumber1 = operand1.value.numberValue;
-    double tempNumber2 = operand2.value.numberValue;
+    value_t output;
+    output.type = VALUE_TYPE_VOID;
+    operand1 = resolveAliasValue(operand1);
+    operand2 = resolveAliasValue(operand2);
+    double tempNumber1 = operand1.numberValue;
+    double tempNumber2 = operand2.numberValue;
     switch (operator->number) {
         case OPERATOR_ADD:
         {
             // TODO: Support concatenation.
-            output.value.type = VALUE_TYPE_NUMBER;
-            output.value.numberValue = tempNumber1 + tempNumber2;
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = tempNumber1 + tempNumber2;
             break;
         }
         case OPERATOR_SUBTRACT:
         {
-            output.value.type = VALUE_TYPE_NUMBER;
-            output.value.numberValue = tempNumber1 - tempNumber2;
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = tempNumber1 - tempNumber2;
             break;
         }
         case OPERATOR_MULTIPLY:
         {
-            output.value.type = VALUE_TYPE_NUMBER;
-            output.value.numberValue = tempNumber1 * tempNumber2;
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = tempNumber1 * tempNumber2;
             break;
         }
         case OPERATOR_DIVIDE:
         {
-            output.value.type = VALUE_TYPE_NUMBER;
-            output.value.numberValue = tempNumber1 / tempNumber2;
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = tempNumber1 / tempNumber2;
             break;
         }
         // TODO: Calculate with more unary operators.

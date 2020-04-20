@@ -89,13 +89,39 @@ value_t convertValueToString(value_t value, int8_t shouldCopy) {
     return output;
 }
 
+value_t readValueFromAlias(alias_t alias) {
+    heapValue_t *heapValue = alias.container;
+    int32_t index = (int32_t)(alias.index);
+    if (heapValue->type == VALUE_TYPE_FRAME) {
+        return heapValue->frameVariableList[index];
+    }
+    // TODO: Read from more types of heap values.
+    
+    value_t output;
+    output.type = VALUE_TYPE_VOID;
+    return output;
+}
+
 void writeValueToAlias(alias_t alias, value_t value) {
     heapValue_t *heapValue = alias.container;
+    int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
-        writeFrameVariable(heapValue, (int32_t)alias.index, value);
+        writeFrameVariable(heapValue, index, value);
     }
     // TODO: Write to more types of heap values.
     
+}
+
+value_t resolveAliasValue(value_t value) {
+    if (value.type == VALUE_TYPE_ALIAS) {
+        return readValueFromAlias(value.alias);
+    }
+    return value;
+}
+
+void writeValueToAliasValue(value_t aliasValue, value_t value) {
+    // TODO: Enforce that aliasValue has the correct type.
+    writeValueToAlias(aliasValue.alias, value);
 }
 
 

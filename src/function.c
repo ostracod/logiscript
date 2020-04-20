@@ -34,7 +34,7 @@ builtInFunction_t *findBuiltInFunctionByName(int8_t *name) {
 
 void invokeBuiltInFunction(
     builtInFunction_t *builtInFunction,
-    aliasedValue_t *argumentList,
+    value_t *argumentList,
     int32_t argumentCount
 ) {
     // TODO: Validate argumentCount.
@@ -42,12 +42,14 @@ void invokeBuiltInFunction(
     switch (builtInFunction->number) {
         case BUILT_IN_FUNCTION_SET:
         {
-            writeValueToAlias(argumentList[0].alias, argumentList[1].value);
+            value_t tempValue = resolveAliasValue(argumentList[1]);
+            writeValueToAliasValue(argumentList[0], tempValue);
             break;
         }
         case BUILT_IN_FUNCTION_PRINT:
         {
-            value_t stringValue = convertValueToString(argumentList[0].value, false);
+            value_t tempValue = resolveAliasValue(argumentList[0]);
+            value_t stringValue = convertValueToString(tempValue, false);
             printf("%s\n", stringValue.heapValue->vector.data);
             break;
         }
@@ -71,7 +73,7 @@ heapValue_t *createFunctionHandle(customFunction_t *customFunction) {
 
 heapValue_t *invokeFunctionHandle(
     heapValue_t *functionHandle,
-    aliasedValue_t *argumentList,
+    value_t *argumentList,
     int32_t argumentCount
 ) {
     customFunctionHandle_t *tempHandle = functionHandle->customFunctionHandle;
@@ -79,15 +81,7 @@ heapValue_t *invokeFunctionHandle(
     // TODO: Populate alias variables in frame.
     heapValue_t *tempFrame = scopeCreateFrame(&(customFunction->scope));
     for (int32_t index = 0; index < argumentCount; index++) {
-        aliasedValue_t *tempAliasedValue = argumentList + index;
-        frameVariable_t *tempVariable = tempFrame->frameVariableList + index;
-        if (tempAliasedValue->alias.container == NULL) {
-            tempVariable->type = FRAME_VARIABLE_TYPE_VALUE;
-            tempVariable->value = tempAliasedValue->value;
-        } else {
-            tempVariable->type = FRAME_VARIABLE_TYPE_ALIAS;
-            tempVariable->alias = tempAliasedValue->alias;
-        }
+        tempFrame->frameVariableList[index] = argumentList[index];
     }
     for (int64_t index = 0; index < customFunction->statementList.length; index++) {
         baseStatement_t *tempStatement;
@@ -99,7 +93,7 @@ heapValue_t *invokeFunctionHandle(
 
 void invokeFunction(
     value_t functionValue,
-    aliasedValue_t *argumentList,
+    value_t *argumentList,
     int32_t argumentCount
 ) {
     if (functionValue.type == VALUE_TYPE_BUILT_IN_FUNCTION) {

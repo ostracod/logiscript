@@ -48,12 +48,12 @@ builtInFunction_t *findBuiltInFunctionByName(int8_t *name);
 heapValue_t *createFunctionHandle(customFunction_t *customFunction);
 heapValue_t *invokeFunctionHandle(
     heapValue_t *functionHandle,
-    aliasedValue_t *argumentList,
+    value_t *argumentList,
     int32_t argumentCount
 );
 void invokeFunction(
     value_t functionValue,
-    aliasedValue_t *argumentList,
+    value_t *argumentList,
     int32_t argumentCount
 );
 
