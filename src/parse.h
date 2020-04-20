@@ -20,7 +20,7 @@ typedef struct parser {
     bodyPos_t *bodyPos;
 } parser_t;
 
-void parseStatementList(vector_t *destination, parser_t *parser);
+void parseStatementList(vector_t *destination, parser_t *parser, int8_t endCharacter);
 
 // PARSE_HEADER_FILE
 #endif

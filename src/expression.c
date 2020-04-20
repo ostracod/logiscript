@@ -6,10 +6,10 @@
 #include "utilities.h"
 #include "expression.h"
 
-baseExpression_t *createIdentifierExpression(int8_t *name, int64_t length) {
+baseExpression_t *createIdentifierExpression(int8_t *name) {
     identifierExpression_t *output = malloc(sizeof(identifierExpression_t));
     output->base.type = EXPRESSION_TYPE_IDENTIFIER;
-    output->name = mallocText(name, length);
+    output->name = name;
     return (baseExpression_t *)output;
 }
 
@@ -45,6 +45,13 @@ baseExpression_t *createBinaryExpression(
     output->operator = operator;
     output->operand1 = operand1;
     output->operand2 = operand2;
+    return (baseExpression_t *)output;
+}
+
+baseExpression_t *createCustomFunctionExpression(customFunction_t *customFunction) {
+    customFunctionExpression_t *output = malloc(sizeof(customFunctionExpression_t));
+    output->base.type = EXPRESSION_TYPE_FUNCTION;
+    output->customFunction = customFunction;
     return (baseExpression_t *)output;
 }
 

@@ -60,7 +60,8 @@ typedef struct aliasedValue {
     alias_t alias;
 } aliasedValue_t;
 
-heapValue_t *createHeapValue();
+heapValue_t *createHeapValue(int8_t type);
+value_t createValueFromHeapValue(heapValue_t *heapValue);
 value_t copyValue(value_t value);
 value_t convertValueToString(value_t value, int8_t shouldCopy);
 void writeValueToAlias(alias_t alias, value_t value);

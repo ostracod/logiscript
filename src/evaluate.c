@@ -53,6 +53,13 @@ aliasedValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expressi
             output = calculateBinaryOperator(tempOperator, tempOperand1, tempOperand2);
             break;
         }
+        case EXPRESSION_TYPE_FUNCTION:
+        {
+            heapValue_t *tempHandle = createFunctionHandle(
+                ((customFunctionExpression_t *)expression)->customFunction
+            );
+            output.value = createValueFromHeapValue(tempHandle);
+        }
         // TODO: Evaluate other types of expressions.
         
         default:
@@ -85,10 +92,8 @@ void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
 }
 
 void evaluateScript(script_t *script) {
-    customFunctionHandle_t tempHandle;
-    tempHandle.function = script->topLevelFunction;
-    tempHandle.aliasList = NULL;
-    script->globalFrame = invokeFunctionHandle(&tempHandle, NULL, 0);
+    heapValue_t *tempHandle = createFunctionHandle(script->topLevelFunction);
+    script->globalFrame = invokeFunctionHandle(tempHandle, NULL, 0);
 }
 
 

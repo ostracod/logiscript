@@ -60,13 +60,35 @@ void invokeBuiltInFunction(
     }
 }
 
+heapValue_t *createFunctionHandle(customFunction_t *customFunction) {
+    customFunctionHandle_t *tempHandle = malloc(sizeof(customFunctionHandle_t));
+    tempHandle->function = customFunction;
+    tempHandle->aliasList = NULL; // TODO: Populate this.
+    heapValue_t *output = createHeapValue(VALUE_TYPE_CUSTOM_FUNCTION);
+    output->customFunctionHandle = tempHandle;
+    return output;
+}
+
 heapValue_t *invokeFunctionHandle(
-    customFunctionHandle_t *functionHandle,
+    heapValue_t *functionHandle,
     aliasedValue_t *argumentList,
     int32_t argumentCount
 ) {
-    customFunction_t *customFunction = functionHandle->function;
+    customFunctionHandle_t *tempHandle = functionHandle->customFunctionHandle;
+    customFunction_t *customFunction = tempHandle->function;
+    // TODO: Populate alias variables in frame.
     heapValue_t *tempFrame = scopeCreateFrame(&(customFunction->scope));
+    for (int32_t index = 0; index < argumentCount; index++) {
+        aliasedValue_t *tempAliasedValue = argumentList + index;
+        frameVariable_t *tempVariable = tempFrame->frameVariableList + index;
+        if (tempAliasedValue->alias.container == NULL) {
+            tempVariable->type = FRAME_VARIABLE_TYPE_VALUE;
+            tempVariable->value = tempAliasedValue->value;
+        } else {
+            tempVariable->type = FRAME_VARIABLE_TYPE_ALIAS;
+            tempVariable->alias = tempAliasedValue->alias;
+        }
+    }
     for (int64_t index = 0; index < customFunction->statementList.length; index++) {
         baseStatement_t *tempStatement;
         getVectorElement(&tempStatement, &(customFunction->statementList), index);
@@ -89,11 +111,7 @@ void invokeFunction(
         return;
     }
     if (functionValue.type == VALUE_TYPE_CUSTOM_FUNCTION) {
-        invokeFunctionHandle(
-            functionValue.heapValue->customFunctionHandle,
-            argumentList,
-            argumentCount
-        );
+        invokeFunctionHandle(functionValue.heapValue, argumentList, argumentCount);
         return;
     }
     // TODO: Throw an error if the given value is not a function.

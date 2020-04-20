@@ -39,7 +39,7 @@ script_t *importScript(int8_t *path) {
     parser.script = output;
     parser.customFunction = topLevelFunction;
     parser.bodyPos = &bodyPos;
-    parseStatementList(&(topLevelFunction->statementList), &parser);
+    parseStatementList(&(topLevelFunction->statementList), &parser, -1);
     resolveIdentifiersInFunction(topLevelFunction);
     evaluateScript(output);
     return output;

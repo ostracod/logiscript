@@ -125,6 +125,72 @@ void bodyPosSkipOperator(bodyPos_t *bodyPos, operator_t *operator) {
     bodyPos->index += strlen((char *)(operator->text));
 }
 
+int8_t *parseIdentifier(parser_t *parser) {
+    bodyPos_t *bodyPos = parser->bodyPos;
+    bodyPos_t startBodyPos = *bodyPos;
+    bodyPosSeekEndOfIdentifier(bodyPos);
+    int8_t *tempText = getBodyPosPointer(&startBodyPos);
+    int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
+    return mallocText(tempText, tempLength);
+}
+
+// If endCharacter is -1, then this function will parse
+// identifiers until the end of a line.
+void parseIdentifierList(vector_t *destination, parser_t *parser, int8_t endCharacter) {
+    bodyPos_t *bodyPos = parser->bodyPos;
+    createEmptyVector(destination, sizeof(int8_t *));
+    while (true) {
+        bodyPosSkipWhitespace(bodyPos);
+        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+        if (endCharacter < 0) {
+            if (characterIsEndOfLine(tempCharacter)) {
+                break;
+            }
+        } else {
+            if (tempCharacter == endCharacter) {
+                bodyPos->index += 1;
+                break;
+            }
+        }
+        if (destination->length > 0) {
+            if (tempCharacter == ',') {
+                bodyPos->index += 1;
+                bodyPosSkipWhitespace(bodyPos);
+            } else {
+                // TODO: Report parsing errors.
+                
+                return;
+            }
+        }
+        int8_t *tempIdentifier = parseIdentifier(parser);
+        pushVectorElement(destination, &tempIdentifier);
+    }
+}
+
+baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
+    // TODO: Report parsing errors.
+    vector_t identifierList;
+    parseIdentifierList(&identifierList, parser, -1);
+    bodyPosSeekNextLine(parser->bodyPos);
+    int32_t argumentAmount = (int32_t)(identifierList.length);
+    customFunction_t *customFunction = malloc(sizeof(customFunction_t));
+    customFunction->base.type = FUNCTION_TYPE_CUSTOM;
+    customFunction->base.argumentAmount = argumentAmount;
+    customFunction->scope.aliasVariableAmount = 0;
+    createEmptyVector(&(customFunction->scope.variableList), sizeof(scopeVariable_t *));
+    for (int32_t index = 0; index < argumentAmount; index++) {
+        int8_t *tempIdentifier;
+        getVectorElement(&tempIdentifier, &identifierList, index);
+        scopeAddVariable(&(customFunction->scope), tempIdentifier);
+    }
+    cleanUpVector(&identifierList);
+    customFunction_t *lastCustomFunction = parser->customFunction;
+    parser->customFunction = customFunction;
+    parseStatementList(&(customFunction->statementList), parser, '}');
+    parser->customFunction = lastCustomFunction;
+    return createCustomFunctionExpression(customFunction);
+}
+
 baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
     bodyPos_t *bodyPos = parser->bodyPos;
     bodyPosSkipWhitespace(bodyPos);
@@ -133,11 +199,8 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
     if (tempOperator == NULL) {
         int8_t firstCharacter = bodyPosGetCharacter(bodyPos);
         if (isFirstIdentifierCharacter(firstCharacter)) {
-            bodyPos_t startBodyPos = *bodyPos;
-            bodyPosSeekEndOfIdentifier(bodyPos);
-            int8_t *tempText = getBodyPosPointer(&startBodyPos);
-            int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
-            output = createIdentifierExpression(tempText, tempLength);
+            int8_t *tempIdentifier = parseIdentifier(parser);
+            output = createIdentifierExpression(tempIdentifier);
         } else if (isNumberCharacter(firstCharacter)) {
             bodyPos_t startBodyPos = *bodyPos;
             bodyPosSeekEndOfNumber(bodyPos);
@@ -152,6 +215,21 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             tempValue.type = VALUE_TYPE_NUMBER;
             tempValue.numberValue = tempNumber;
             output = createConstantExpression(tempValue);
+        } else {
+            switch (firstCharacter) {
+                case '{':
+                {
+                    bodyPos->index += 1;
+                    output = parseCustomFunctionExpression(parser);
+                    break;
+                }
+                // TODO: Handle more types of expressions.
+                
+                default:
+                {
+                    break;
+                }
+            }
         }
     } else {
         bodyPosSkipOperator(bodyPos, tempOperator);
@@ -179,8 +257,6 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             break;
         }
     }
-    // TODO: Handle more types of expressions.
-    
     return output;
 }
 
@@ -205,6 +281,7 @@ void parseExpressionList(vector_t *destination, parser_t *parser, int8_t endChar
         if (destination->length > 0) {
             if (tempCharacter == ',') {
                 bodyPos->index += 1;
+                bodyPosSkipWhitespace(bodyPos);
             } else {
                 // TODO: Report parsing errors.
                 
@@ -239,9 +316,18 @@ baseStatement_t *parseStatement(int8_t *hasReachedEnd, parser_t *parser) {
     return (baseStatement_t *)output;
 }
 
-void parseStatementList(vector_t *destination, parser_t *parser) {
+// If endCharacter is -1, then this function will parse
+// expressions until the end of the file.
+void parseStatementList(vector_t *destination, parser_t *parser, int8_t endCharacter) {
+    bodyPos_t *bodyPos = parser->bodyPos;
     createEmptyVector(destination, sizeof(baseStatement_t *));
     while (true) {
+        bodyPosSkipWhitespace(bodyPos);
+        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+        if (tempCharacter == endCharacter) {
+            bodyPos->index += 1;
+            break;
+        }
         int8_t tempHasReachedEnd;
         baseStatement_t *baseStatement = parseStatement(&tempHasReachedEnd, parser);
         if (baseStatement != NULL) {

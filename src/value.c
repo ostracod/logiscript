@@ -8,9 +8,9 @@
 
 heapValue_t *firstHeapValue = NULL;
 
-heapValue_t *createHeapValue() {
+heapValue_t *createHeapValue(int8_t type) {
     heapValue_t *output = malloc(sizeof(heapValue_t));
-    output->type = VALUE_TYPE_VOID;
+    output->type = type;
     output->previous = NULL;
     output->next = firstHeapValue;
     if (firstHeapValue != NULL) {
@@ -22,19 +22,22 @@ heapValue_t *createHeapValue() {
     return output;
 }
 
+value_t createValueFromHeapValue(heapValue_t *heapValue) {
+    value_t output;
+    output.type = heapValue->type;
+    output.heapValue = heapValue;
+    return output;
+}
+
 value_t copyValue(value_t value) {
     // TODO: Implement string and list copy.
     return value;
 }
 
 value_t convertCharacterVectorToStringValue(vector_t *vector) {
-    heapValue_t *tempHeapValue = createHeapValue();
-    tempHeapValue->type = VALUE_TYPE_STRING;
+    heapValue_t *tempHeapValue = createHeapValue(VALUE_TYPE_STRING);
     tempHeapValue->vector = *vector;
-    value_t output;
-    output.type = VALUE_TYPE_STRING;
-    output.heapValue = tempHeapValue;
-    return output;
+    return createValueFromHeapValue(tempHeapValue);
 }
 
 value_t convertTextToStringValue(int8_t *text) {

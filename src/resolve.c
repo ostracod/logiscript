@@ -60,6 +60,13 @@ void resolveIdentifiersInExpression(
             resolveIdentifiersInExpression(function, &(binaryExpression->operand2));
             break;
         }
+        case EXPRESSION_TYPE_FUNCTION:
+        {
+            resolveIdentifiersInFunction(
+                ((customFunctionExpression_t *)tempExpression)->customFunction
+            );
+            break;
+        }
         // TODO: Resolve identifiers in other expression types.
         
         default:

@@ -37,8 +37,7 @@ heapValue_t *scopeCreateFrame(scope_t *scope) {
     }
     // TODO: Populate alias variables.
     
-    heapValue_t *output = createHeapValue();
-    output->type = VALUE_TYPE_FRAME;
+    heapValue_t *output = createHeapValue(VALUE_TYPE_FRAME);
     output->frameVariableList = frameVariableList;
     return output;
 }
