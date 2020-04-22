@@ -90,13 +90,16 @@ void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
         value_t functionValue = evaluateExpression(frame, invocationStatement->function);
         functionValue = resolveAliasValue(functionValue);
         int32_t tempLength = (int32_t)(invocationStatement->argumentList.length);
-        value_t argumentList[tempLength];
+        value_t tempValueList[tempLength];
         for (int32_t index = 0; index < tempLength; index++) {
             baseExpression_t *tempExpression;
             getVectorElement(&tempExpression, &(invocationStatement->argumentList), index);
-            argumentList[index] = evaluateExpression(frame, tempExpression);
+            tempValueList[index] = evaluateExpression(frame, tempExpression);
         }
-        invokeFunction(functionValue, argumentList, tempLength);
+        argumentList_t argumentList;
+        argumentList.valueList = tempValueList;
+        argumentList.count = tempLength;
+        invokeFunction(functionValue, &argumentList);
     }
     // TODO: Evaluate other types of statements.
     
@@ -107,7 +110,7 @@ void evaluateScript(script_t *script) {
         NULL,
         script->topLevelFunction
     );
-    script->globalFrame = invokeFunctionHandle(tempHandle, NULL, 0);
+    script->globalFrame = invokeFunctionHandle(tempHandle, NULL);
 }
 
 

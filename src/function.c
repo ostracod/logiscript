@@ -22,6 +22,8 @@ builtInFunction_t builtInFunctionSet[] = {
     {{FUNCTION_TYPE_BUILT_IN, 1}, (int8_t *)"PROMPT", BUILT_IN_FUNCTION_PROMPT}
 };
 
+argumentList_t emptyArgumentList = {NULL, 0};
+
 builtInFunction_t *findBuiltInFunctionByName(int8_t *name) {
     int32_t tempLength = sizeof(builtInFunctionSet) / sizeof(*builtInFunctionSet);
     for (int32_t index = 0; index < tempLength; index++) {
@@ -33,58 +35,94 @@ builtInFunction_t *findBuiltInFunctionByName(int8_t *name) {
     return NULL;
 }
 
-void invokeBuiltInFunction(
-    builtInFunction_t *builtInFunction,
-    value_t *argumentList,
-    int32_t argumentCount
-) {
-    // TODO: Validate argumentCount.
-    
+void checkInvocationArgumentList(baseFunction_t *function, argumentList_t **argumentList) {
+    if (*argumentList == NULL) {
+        *argumentList = &emptyArgumentList;
+    }
+    int32_t argumentAmount = function->argumentAmount;
+    if ((*argumentList)->count > argumentAmount) {
+        if (argumentAmount == 1) {
+            throwBuiltInError(DATA_ERROR_CONSTANT, (int8_t *)"Expected at most 1 argument.");
+        } else {
+            int8_t *tempText;
+            asprintf((char **)&tempText, "Expected at most %d arguments.", argumentAmount);
+            throwBuiltInError(DATA_ERROR_CONSTANT, tempText);
+            free(tempText);
+        }
+    }
+}
+
+value_t getArgument(argumentList_t *argumentList, int32_t index) {
+    if (index < argumentList->count) {
+        return argumentList->valueList[index];
+    }
+    value_t tempValue;
+    tempValue.type = VALUE_TYPE_VOID;
+    return tempValue;
+}
+
+value_t getResolvedArgument(argumentList_t *argumentList, int32_t index) {
+    value_t tempValue = getArgument(argumentList, index);
+    return resolveAliasValue(tempValue);
+}
+
+void invokeBuiltInFunction(builtInFunction_t *builtInFunction, argumentList_t *argumentList) {
+    checkInvocationArgumentList(&(builtInFunction->base), &argumentList);
+    if (hasThrownError) {
+        return;
+    }
     switch (builtInFunction->number) {
         case BUILT_IN_FUNCTION_SET:
         {
-            value_t tempValue = resolveAliasValue(argumentList[1]);
-            writeValueToAliasValue(argumentList[0], tempValue);
+            value_t tempValue = getResolvedArgument(argumentList, 1);
+            writeValueToAliasValue(getArgument(argumentList, 0), tempValue);
             break;
         }
         case BUILT_IN_FUNCTION_IF:
         {
-            value_t tempCondition = resolveAliasValue(argumentList[0]);
+            value_t tempCondition = getResolvedArgument(argumentList, 0);
             if (tempCondition.numberValue != 0) {
-                value_t tempHandle = resolveAliasValue(argumentList[1]);
-                invokeFunctionHandle(tempHandle.heapValue, NULL, 0);
+                value_t tempHandle = getResolvedArgument(argumentList, 1);
+                invokeFunctionHandle(tempHandle.heapValue, NULL);
             }
             break;
         }
         case BUILT_IN_FUNCTION_LOOP:
         {
-            value_t tempHandle = resolveAliasValue(argumentList[0]);
+            value_t tempHandle = getResolvedArgument(argumentList, 0);
             while (!hasThrownError) {
-                invokeFunctionHandle(tempHandle.heapValue, NULL, 0);
+                invokeFunctionHandle(tempHandle.heapValue, NULL);
             }
             break;
         }
         case BUILT_IN_FUNCTION_THROW:
         {
-            value_t tempChannel = resolveAliasValue(argumentList[0]);
-            value_t tempValue = resolveAliasValue(argumentList[1]);
+            value_t tempChannel = getResolvedArgument(argumentList, 0);
+            value_t tempValue = getResolvedArgument(argumentList, 1);
             throwError((int32_t)(tempChannel.numberValue), tempValue);
             break;
         }
         case BUILT_IN_FUNCTION_CATCH:
         {
-            value_t tempChannel = resolveAliasValue(argumentList[1]);
-            value_t tempHandle = resolveAliasValue(argumentList[2]);
-            invokeFunctionHandle(tempHandle.heapValue, NULL, 0);
-            if (hasThrownError && (int32_t)(tempChannel.numberValue) == thrownErrorChannel) {
-                writeValueToAliasValue(argumentList[0], thrownErrorValue);
-                hasThrownError = false;
+            value_t tempDestination = getArgument(argumentList, 0);
+            value_t tempChannel = getResolvedArgument(argumentList, 1);
+            value_t tempHandle = getResolvedArgument(argumentList, 2);
+            invokeFunctionHandle(tempHandle.heapValue, NULL);
+            if (hasThrownError) {
+                if ((int32_t)(tempChannel.numberValue) == thrownErrorChannel) {
+                    writeValueToAliasValue(tempDestination, thrownErrorValue);
+                    hasThrownError = false;
+                }
+            } else {
+                value_t tempValue;
+                tempValue.type = VALUE_TYPE_VOID;
+                writeValueToAliasValue(tempDestination, tempValue);
             }
             break;
         }
         case BUILT_IN_FUNCTION_PRINT:
         {
-            value_t tempValue = resolveAliasValue(argumentList[0]);
+            value_t tempValue = getResolvedArgument(argumentList, 0);
             value_t stringValue = convertValueToString(tempValue, false);
             printf("%s\n", stringValue.heapValue->vector.data);
             break;
@@ -151,17 +189,17 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
     return output;
 }
 
-heapValue_t *invokeFunctionHandle(
-    heapValue_t *functionHandle,
-    value_t *argumentList,
-    int32_t argumentCount
-) {
+heapValue_t *invokeFunctionHandle(heapValue_t *functionHandle, argumentList_t *argumentList) {
     customFunctionHandle_t *tempHandle = functionHandle->customFunctionHandle;
-    heapValue_t *tempFrame = functionHandleCreateFrame(tempHandle);
-    for (int32_t index = 0; index < argumentCount; index++) {
-        tempFrame->frameVariableList[index] = argumentList[index];
-    }
     customFunction_t *customFunction = tempHandle->function;
+    checkInvocationArgumentList(&(customFunction->base), &argumentList);
+    if (hasThrownError) {
+        return NULL;
+    }
+    heapValue_t *tempFrame = functionHandleCreateFrame(tempHandle);
+    for (int32_t index = 0; index < argumentList->count; index++) {
+        tempFrame->frameVariableList[index] = argumentList->valueList[index];
+    }
     for (int64_t index = 0; index < customFunction->statementList.length; index++) {
         baseStatement_t *tempStatement;
         getVectorElement(&tempStatement, &(customFunction->statementList), index);
@@ -173,21 +211,13 @@ heapValue_t *invokeFunctionHandle(
     return tempFrame;
 }
 
-void invokeFunction(
-    value_t functionValue,
-    value_t *argumentList,
-    int32_t argumentCount
-) {
+void invokeFunction(value_t functionValue, argumentList_t *argumentList) {
     if (functionValue.type == VALUE_TYPE_BUILT_IN_FUNCTION) {
-        invokeBuiltInFunction(
-            functionValue.builtInFunction,
-            argumentList,
-            argumentCount
-        );
+        invokeBuiltInFunction(functionValue.builtInFunction, argumentList);
         return;
     }
     if (functionValue.type == VALUE_TYPE_CUSTOM_FUNCTION) {
-        invokeFunctionHandle(functionValue.heapValue, argumentList, argumentCount);
+        invokeFunctionHandle(functionValue.heapValue, argumentList);
         return;
     }
     // TODO: Throw an error if the given value is not a function.

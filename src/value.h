@@ -60,6 +60,7 @@ typedef struct heapValue {
 heapValue_t *createHeapValue(int8_t type);
 value_t createValueFromHeapValue(heapValue_t *heapValue);
 value_t copyValue(value_t value);
+value_t convertTextToStringValue(int8_t *text);
 value_t convertValueToString(value_t value, int8_t shouldCopy);
 value_t readValueFromAlias(alias_t alias);
 void writeValueToAlias(alias_t alias, value_t value);

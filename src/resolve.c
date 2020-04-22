@@ -18,6 +18,7 @@ numberConstant_t numberConstantSet[] = {
     {(int8_t *)"LIST_TYPE", LIST_TYPE_CONSTANT},
     {(int8_t *)"FUNCTION_TYPE", FUNCTION_TYPE_CONSTANT},
     {(int8_t *)"VOID_TYPE", VOID_TYPE_CONSTANT},
+    {(int8_t *)"ERROR_CHANNEL", ERROR_CHANNEL_CONSTANT},
     {(int8_t *)"TYPE_ERROR", TYPE_ERROR_CONSTANT},
     {(int8_t *)"NUMBER_ERROR", NUMBER_ERROR_CONSTANT},
     {(int8_t *)"DATA_ERROR", DATA_ERROR_CONSTANT},
