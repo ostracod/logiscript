@@ -83,6 +83,7 @@ typedef struct invocationExpression {
 
 baseExpression_t *createIdentifierExpression(int8_t *name);
 baseExpression_t *createConstantExpression(value_t value);
+baseExpression_t *createListExpression(vector_t *expressionList);
 baseExpression_t *createVariableExpression(scopeVariable_t *variable);
 baseExpression_t *createUnaryExpression(operator_t *operator, baseExpression_t *operand);
 baseExpression_t *createBinaryExpression(

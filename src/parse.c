@@ -84,6 +84,16 @@ int8_t isNumberCharacter(int8_t character) {
             || character == '.');
 }
 
+int8_t escapeCharacter(int8_t character) {
+    if (character == 'n') {
+        return '\n';
+    } else if (character == 't') {
+        return '\t';
+    } else {
+        return character;
+    }
+}
+
 void bodyPosSeekEndOfIdentifier(bodyPos_t *bodyPos) {
     while (true) {
         int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
@@ -167,6 +177,41 @@ void parseIdentifierList(vector_t *destination, parser_t *parser, int8_t endChar
     }
 }
 
+baseExpression_t *parseStringConstantExpression(parser_t *parser) {
+    bodyPos_t *bodyPos = parser->bodyPos;
+    heapValue_t *tempHeapValue = createHeapValue(VALUE_TYPE_STRING);
+    vector_t *tempText = &(tempHeapValue->vector);
+    createEmptyVector(tempText, 1);
+    int8_t tempIsEscaped = false;
+    while (true) {
+        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+        if (characterIsEndOfLine(tempCharacter)) {
+            // TODO: Report parsing error.
+            
+            return NULL;
+        }
+        if (tempIsEscaped) {
+            tempCharacter = escapeCharacter(tempCharacter);
+            pushVectorElement(tempText, &tempCharacter);
+            tempIsEscaped = false;
+        } else {
+            if (tempCharacter == '"') {
+                break;
+            } else if (tempCharacter == '\\') {
+                tempIsEscaped = true;
+            } else {
+                pushVectorElement(tempText, &tempCharacter);
+            }
+        }
+        bodyPos->index += 1;
+    }
+    bodyPos += 1;
+    int8_t tempCharacter = 0;
+    pushVectorElement(tempText, &tempCharacter);
+    value_t tempValue = createValueFromHeapValue(tempHeapValue);
+    return createConstantExpression(tempValue);
+}
+
 baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
     // TODO: Report parsing errors.
     customFunction_t *lastCustomFunction = parser->customFunction;
@@ -192,6 +237,8 @@ baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
     parser->customFunction = lastCustomFunction;
     return createCustomFunctionExpression(customFunction);
 }
+
+void parseExpressionList(vector_t *destination, parser_t *parser, int8_t endCharacter);
 
 baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
     bodyPos_t *bodyPos = parser->bodyPos;
@@ -219,6 +266,20 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             output = createConstantExpression(tempValue);
         } else {
             switch (firstCharacter) {
+                case '"':
+                {
+                    bodyPos->index += 1;
+                    output = parseStringConstantExpression(parser);
+                    break;
+                }
+                case '[':
+                {
+                    bodyPos->index += 1;
+                    vector_t tempList;
+                    parseExpressionList(&tempList, parser, ']');
+                    output = createListExpression(&tempList);
+                    break;
+                }
                 case '{':
                 {
                     bodyPos->index += 1;

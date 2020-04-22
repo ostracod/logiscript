@@ -48,42 +48,78 @@ value_t convertTextToStringValue(int8_t *text) {
 }
 
 value_t convertValueToString(value_t value, int8_t shouldCopy) {
-    if (value.type == VALUE_TYPE_VOID) {
-        return convertTextToStringValue((int8_t *)"(Void)");
-    }
-    if (value.type == VALUE_TYPE_STRING) {
-        if (shouldCopy) {
-            return copyValue(value);
-        } else {
-            return value;
+    switch (value.type) {
+        case VALUE_TYPE_VOID:
+        {
+            return convertTextToStringValue((int8_t *)"(Void)");
         }
-    }
-    if (value.type == VALUE_TYPE_NUMBER) {
-        double tempNumber = value.numberValue;
-        int8_t tempBuffer[50];
-        sprintf((char *)tempBuffer, "%lf", tempNumber);
-        int32_t tempLength = strlen((char *)tempBuffer);
-        int32_t minimumEndIndex = 0;
-        while (minimumEndIndex < tempLength) {
-            int8_t tempCharacter = tempBuffer[minimumEndIndex];
-            if (tempCharacter == '.') {
-                break;
+        case VALUE_TYPE_STRING:
+        {
+            if (shouldCopy) {
+                return copyValue(value);
+            } else {
+                return value;
             }
-            minimumEndIndex += 1;
         }
-        int32_t endIndex = tempLength;
-        while (endIndex > minimumEndIndex) {
-            int8_t tempCharacter = tempBuffer[endIndex - 1];
-            if (tempCharacter != '0' && tempCharacter != '.') {
-                break;
+        case VALUE_TYPE_NUMBER:
+        {
+            double tempNumber = value.numberValue;
+            int8_t tempBuffer[50];
+            sprintf((char *)tempBuffer, "%lf", tempNumber);
+            int32_t tempLength = strlen((char *)tempBuffer);
+            int32_t minimumEndIndex = 0;
+            while (minimumEndIndex < tempLength) {
+                int8_t tempCharacter = tempBuffer[minimumEndIndex];
+                if (tempCharacter == '.') {
+                    break;
+                }
+                minimumEndIndex += 1;
             }
-            endIndex -= 1;
+            int32_t endIndex = tempLength;
+            while (endIndex > minimumEndIndex) {
+                int8_t tempCharacter = tempBuffer[endIndex - 1];
+                if (tempCharacter != '0' && tempCharacter != '.') {
+                    break;
+                }
+                endIndex -= 1;
+            }
+            tempBuffer[endIndex] = 0;
+            return convertTextToStringValue(tempBuffer);
         }
-        tempBuffer[endIndex] = 0;
-        return convertTextToStringValue(tempBuffer);
+        case VALUE_TYPE_LIST:
+        {
+            vector_t tempVector;
+            createEmptyVector(&tempVector, 1);
+            int8_t tempCharacter;
+            tempCharacter = '[';
+            pushVectorElement(&tempVector, &tempCharacter);
+            vector_t *tempList = &(value.heapValue->vector);
+            for (int64_t index = 0; index < tempList->length; index++) {
+                if (index > 0) {
+                    tempCharacter = ',';
+                    pushVectorElement(&tempVector, &tempCharacter);
+                    tempCharacter = ' ';
+                    pushVectorElement(&tempVector, &tempCharacter);
+                }
+                value_t tempValue;
+                getVectorElement(&tempValue, tempList, index);
+                value_t tempStringValue = convertValueToString(tempValue, false);
+                vector_t *tempText = &(tempStringValue.heapValue->vector);
+                pushVectorOntoVector(&tempVector, tempText);
+                removeVectorElement(&tempVector, tempVector.length - 1);
+            }
+            tempCharacter = ']';
+            pushVectorElement(&tempVector, &tempCharacter);
+            tempCharacter = 0;
+            pushVectorElement(&tempVector, &tempCharacter);
+            return convertCharacterVectorToStringValue(&tempVector);
+        }
+        // TODO: Convert more values to strings.
+        
+        default: {
+            break;
+        }
     }
-    // TODO: Convert more values to strings.
-    
     value_t output;
     output.type = VALUE_TYPE_VOID;
     return output;

@@ -19,6 +19,27 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
             output = copyValue(constantExpression->value);
             break;
         }
+        case EXPRESSION_TYPE_LIST:
+        {
+            listExpression_t *listExpression = (listExpression_t *)expression;
+            vector_t tempValueList;
+            createEmptyVector(&tempValueList, sizeof(value_t));
+            for (int64_t index = 0; index < listExpression->expressionList.length; index++) {
+                baseExpression_t *tempElementExpression;
+                getVectorElement(
+                    &tempElementExpression,
+                    &(listExpression->expressionList),
+                    index
+                );
+                value_t tempValue = evaluateExpression(frame, tempElementExpression);
+                tempValue = resolveAliasValue(tempValue);
+                pushVectorElement(&tempValueList, &tempValue);
+            }
+            heapValue_t *tempHeapValue = createHeapValue(VALUE_TYPE_LIST);
+            tempHeapValue->vector = tempValueList;
+            output = createValueFromHeapValue(tempHeapValue);
+            break;
+        }
         case EXPRESSION_TYPE_VARIABLE:
         {
             variableExpression_t *variableExpression = (variableExpression_t *)expression;

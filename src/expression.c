@@ -20,6 +20,13 @@ baseExpression_t *createConstantExpression(value_t value) {
     return (baseExpression_t *)output;
 }
 
+baseExpression_t *createListExpression(vector_t *expressionList) {
+    listExpression_t *output = malloc(sizeof(listExpression_t));
+    output->base.type = EXPRESSION_TYPE_LIST;
+    output->expressionList = *expressionList;
+    return (baseExpression_t *)output;
+}
+
 baseExpression_t *createVariableExpression(scopeVariable_t *variable) {
     variableExpression_t *output = malloc(sizeof(variableExpression_t));
     output->base.type = EXPRESSION_TYPE_VARIABLE;
