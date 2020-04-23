@@ -18,17 +18,24 @@ numberConstant_t numberConstantSet[] = {
     {(int8_t *)"LIST_TYPE", LIST_TYPE_CONSTANT},
     {(int8_t *)"FUNCTION_TYPE", FUNCTION_TYPE_CONSTANT},
     {(int8_t *)"VOID_TYPE", VOID_TYPE_CONSTANT},
-    {(int8_t *)"ERROR_CHANNEL", ERROR_CHANNEL_CONSTANT},
-    {(int8_t *)"TYPE_ERROR", TYPE_ERROR_CONSTANT},
-    {(int8_t *)"NUMBER_ERROR", NUMBER_ERROR_CONSTANT},
-    {(int8_t *)"DATA_ERROR", DATA_ERROR_CONSTANT},
-    {(int8_t *)"MISSING_ERROR", MISSING_ERROR_CONSTANT}
+    {(int8_t *)"ERROR_CHANNEL", ERROR_CHANNEL_CONSTANT}
 };
 
-numberConstant_t *findNumberConstantByName(int8_t *name) {
+vector_t numberConstantList;
+
+void initializeNumberConstants() {
+    createEmptyVector(&numberConstantList, sizeof(numberConstant_t));
     int32_t tempLength = sizeof(numberConstantSet) / sizeof(*numberConstantSet);
     for (int32_t index = 0; index < tempLength; index++) {
         numberConstant_t *tempConstant = numberConstantSet + index;
+        pushVectorElement(&numberConstantList, tempConstant);
+    }
+    addErrorConstantsToNumberConstants(&numberConstantList);
+}
+
+numberConstant_t *findNumberConstantByName(int8_t *name) {
+    for (int32_t index = 0; index < numberConstantList.length; index++) {
+        numberConstant_t *tempConstant = findVectorElement(&numberConstantList, index);
         if (strcmp((char *)name, (char *)tempConstant->name) == 0) {
             return tempConstant;
         }
@@ -98,6 +105,18 @@ void resolveIdentifiersInExpression(
             );
             if (tempResult != NULL) {
                 *expression = tempResult;
+            }
+            break;
+        }
+        case EXPRESSION_TYPE_LIST:
+        {
+            listExpression_t *listExpression = (listExpression_t *)tempExpression;
+            for (int64_t index = 0; index < listExpression->expressionList.length; index++) {
+                baseExpression_t **tempElementExpression = findVectorElement(
+                    &(listExpression->expressionList),
+                    index
+                );
+                resolveIdentifiersInExpression(scope, tempElementExpression);
             }
             break;
         }

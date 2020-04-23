@@ -205,7 +205,7 @@ baseExpression_t *parseStringConstantExpression(parser_t *parser) {
         }
         bodyPos->index += 1;
     }
-    bodyPos += 1;
+    bodyPos->index += 1;
     int8_t tempCharacter = 0;
     pushVectorElement(tempText, &tempCharacter);
     value_t tempValue = createValueFromHeapValue(tempHeapValue);
