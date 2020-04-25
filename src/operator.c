@@ -6,6 +6,7 @@
 #include <math.h>
 #include "utilities.h"
 #include "operator.h"
+#include "error.h"
 
 operator_t operatorSet[] = {
     {(int8_t *)"@", OPERATOR_DECLARE, OPERATOR_ARRANGEMENT_UNARY, 1},
@@ -67,14 +68,18 @@ operator_t *getOperatorInText(int8_t *text, int8_t operatorArrangement) {
 }
 
 value_t calculateUnaryOperator(operator_t *operator, value_t operand) {
+    operand = resolveAliasValue(operand);
     value_t output;
     output.type = VALUE_TYPE_VOID;
-    operand = resolveAliasValue(operand);
+    if (operand.type != VALUE_TYPE_NUMBER) {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected number value.");
+        return output;
+    }
     double tempNumber = operand.numberValue;
+    output.type = VALUE_TYPE_NUMBER;
     switch (operator->number) {
         case OPERATOR_NEGATE:
         {
-            output.type = VALUE_TYPE_NUMBER;
             output.numberValue = -tempNumber;
             break;
         }
@@ -93,83 +98,96 @@ value_t calculateBinaryOperator(
     value_t operand1,
     value_t operand2
 ) {
-    value_t output;
-    output.type = VALUE_TYPE_VOID;
     operand1 = resolveAliasValue(operand1);
     operand2 = resolveAliasValue(operand2);
-    double tempNumber1 = operand1.numberValue;
-    double tempNumber2 = operand2.numberValue;
+    value_t output;
+    output.type = VALUE_TYPE_VOID;
+    int8_t hasProcessedOperator = true;
     switch (operator->number) {
         case OPERATOR_ADD:
         {
             // TODO: Support concatenation.
             output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = tempNumber1 + tempNumber2;
-            break;
-        }
-        case OPERATOR_SUBTRACT:
-        {
-            output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = tempNumber1 - tempNumber2;
-            break;
-        }
-        case OPERATOR_MULTIPLY:
-        {
-            output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = tempNumber1 * tempNumber2;
-            break;
-        }
-        case OPERATOR_DIVIDE:
-        {
-            // TODO: Check for division by zero.
-            output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = tempNumber1 / tempNumber2;
-            break;
-        }
-        case OPERATOR_MODULUS:
-        {
-            output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = fmod(tempNumber1, tempNumber2);
+            output.numberValue = operand1.numberValue + operand2.numberValue;
             break;
         }
         case OPERATOR_EQUAL:
         {
             // TODO: Test equality of strings and lists.
-            output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = (tempNumber1 == tempNumber2);
+            output.numberValue = (operand1.numberValue == operand2.numberValue);
             break;
         }
         case OPERATOR_NOT_EQUAL:
         {
-            output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = (tempNumber1 != tempNumber2);
+            output.numberValue = (operand1.numberValue != operand2.numberValue);
+            break;
+        }
+        default:
+        {
+            hasProcessedOperator = false;
+            break;
+        }
+    }
+    if (hasProcessedOperator) {
+        return output;
+    }
+    if (operand1.type != VALUE_TYPE_NUMBER || operand2.type != VALUE_TYPE_NUMBER) {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected number value.");
+        return output;
+    }
+    double tempNumber1 = operand1.numberValue;
+    double tempNumber2 = operand2.numberValue;
+    output.type = VALUE_TYPE_NUMBER;
+    switch (operator->number) {
+        case OPERATOR_SUBTRACT:
+        {
+            output.numberValue = tempNumber1 - tempNumber2;
+            break;
+        }
+        case OPERATOR_MULTIPLY:
+        {
+            output.numberValue = tempNumber1 * tempNumber2;
+            break;
+        }
+        case OPERATOR_DIVIDE:
+        {
+            if (tempNumber2 == 0) {
+                THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Division by zero.");
+                return output;
+            }
+            output.numberValue = tempNumber1 / tempNumber2;
+            break;
+        }
+        case OPERATOR_MODULUS:
+        {
+            if (tempNumber2 == 0) {
+                THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Division by zero.");
+                return output;
+            }
+            output.numberValue = fmod(tempNumber1, tempNumber2);
             break;
         }
         case OPERATOR_GREATER:
         {
-            output.type = VALUE_TYPE_NUMBER;
             output.numberValue = (tempNumber1 > tempNumber2);
             break;
         }
         case OPERATOR_GREATER_OR_EQUAL:
         {
-            output.type = VALUE_TYPE_NUMBER;
             output.numberValue = (tempNumber1 >= tempNumber2);
             break;
         }
         case OPERATOR_LESS:
         {
-            output.type = VALUE_TYPE_NUMBER;
             output.numberValue = (tempNumber1 < tempNumber2);
             break;
         }
         case OPERATOR_LESS_OR_EQUAL:
         {
-            output.type = VALUE_TYPE_NUMBER;
             output.numberValue = (tempNumber1 <= tempNumber2);
             break;
         }
-        // TODO: Calculate with more unary operators.
+        // TODO: Calculate with more binary operators.
         
         default:
         {

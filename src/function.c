@@ -82,9 +82,13 @@ void invokeBuiltInFunction(builtInFunction_t *builtInFunction, argumentList_t *a
         case BUILT_IN_FUNCTION_IF:
         {
             value_t tempCondition = getResolvedArgument(argumentList, 0);
+            if (tempCondition.type != VALUE_TYPE_NUMBER) {
+                THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Condition must be a number.");
+                return;
+            }
             if (tempCondition.numberValue != 0) {
                 value_t tempHandle = getResolvedArgument(argumentList, 1);
-                invokeFunctionHandle(tempHandle.heapValue, NULL);
+                invokeFunction(tempHandle, NULL);
             }
             break;
         }
@@ -92,13 +96,17 @@ void invokeBuiltInFunction(builtInFunction_t *builtInFunction, argumentList_t *a
         {
             value_t tempHandle = getResolvedArgument(argumentList, 0);
             while (!hasThrownError) {
-                invokeFunctionHandle(tempHandle.heapValue, NULL);
+                invokeFunction(tempHandle, NULL);
             }
             break;
         }
         case BUILT_IN_FUNCTION_THROW:
         {
             value_t tempChannel = getResolvedArgument(argumentList, 0);
+            if (tempChannel.type != VALUE_TYPE_NUMBER) {
+                THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Channel must be a number.");
+                return;
+            }
             value_t tempValue = getResolvedArgument(argumentList, 1);
             throwError((int32_t)(tempChannel.numberValue), tempValue);
             break;
@@ -107,12 +115,16 @@ void invokeBuiltInFunction(builtInFunction_t *builtInFunction, argumentList_t *a
         {
             value_t tempDestination = getArgument(argumentList, 0);
             value_t tempChannel = getResolvedArgument(argumentList, 1);
+            if (tempChannel.type != VALUE_TYPE_NUMBER) {
+                THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Channel must be a number.");
+                return;
+            }
             value_t tempHandle = getResolvedArgument(argumentList, 2);
-            invokeFunctionHandle(tempHandle.heapValue, NULL);
+            invokeFunction(tempHandle, NULL);
             if (hasThrownError) {
                 if ((int32_t)(tempChannel.numberValue) == thrownErrorChannel) {
-                    writeValueToAliasValue(tempDestination, thrownErrorValue);
                     hasThrownError = false;
+                    writeValueToAliasValue(tempDestination, thrownErrorValue);
                 }
             } else {
                 value_t tempValue;
@@ -222,8 +234,7 @@ void invokeFunction(value_t functionValue, argumentList_t *argumentList) {
         invokeFunctionHandle(functionValue.heapValue, argumentList);
         return;
     }
-    // TODO: Throw an error if the given value is not a function.
-    
+    THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected function handle.");
 }
 
 

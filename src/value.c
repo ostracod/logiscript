@@ -5,6 +5,7 @@
 #include <string.h>
 #include "utilities.h"
 #include "value.h"
+#include "error.h"
 
 heapValue_t *firstHeapValue = NULL;
 
@@ -156,7 +157,10 @@ value_t resolveAliasValue(value_t value) {
 }
 
 void writeValueToAliasValue(value_t aliasValue, value_t value) {
-    // TODO: Enforce that aliasValue has the correct type.
+    if (aliasValue.type != VALUE_TYPE_ALIAS) {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected alias to value.");
+        return;
+    }
     writeValueToAlias(aliasValue.alias, value);
 }
 

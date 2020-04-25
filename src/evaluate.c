@@ -8,6 +8,7 @@
 #include "expression.h"
 #include "operator.h"
 #include "value.h"
+#include "error.h"
 
 value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
     value_t output;
@@ -32,6 +33,9 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
                     index
                 );
                 value_t tempValue = evaluateExpression(frame, tempElementExpression);
+                if (hasThrownError) {
+                    return output;
+                }
                 tempValue = resolveAliasValue(tempValue);
                 pushVectorElement(&tempValueList, &tempValue);
             }
@@ -53,6 +57,9 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
             unaryExpression_t *unaryExpression = (unaryExpression_t *)expression;
             operator_t *tempOperator = unaryExpression->operator;
             value_t tempOperand = evaluateExpression(frame, unaryExpression->operand);
+            if (hasThrownError) {
+                return output;
+            }
             output = calculateUnaryOperator(tempOperator, tempOperand);
             break;
         }
@@ -61,7 +68,13 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
             binaryExpression_t *binaryExpression = (binaryExpression_t *)expression;
             operator_t *tempOperator = binaryExpression->operator;
             value_t tempOperand1 = evaluateExpression(frame, binaryExpression->operand1);
+            if (hasThrownError) {
+                return output;
+            }
             value_t tempOperand2 = evaluateExpression(frame, binaryExpression->operand2);
+            if (hasThrownError) {
+                return output;
+            }
             output = calculateBinaryOperator(tempOperator, tempOperand1, tempOperand2);
             break;
         }
@@ -88,6 +101,9 @@ void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
     if (statement->type == STATEMENT_TYPE_INVOCATION) {
         invocationStatement_t *invocationStatement = (invocationStatement_t *)statement;
         value_t functionValue = evaluateExpression(frame, invocationStatement->function);
+        if (hasThrownError) {
+            return;
+        }
         functionValue = resolveAliasValue(functionValue);
         int32_t tempLength = (int32_t)(invocationStatement->argumentList.length);
         value_t tempValueList[tempLength];
@@ -95,6 +111,9 @@ void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
             baseExpression_t *tempExpression;
             getVectorElement(&tempExpression, &(invocationStatement->argumentList), index);
             tempValueList[index] = evaluateExpression(frame, tempExpression);
+            if (hasThrownError) {
+                return;
+            }
         }
         argumentList_t argumentList;
         argumentList.valueList = tempValueList;
