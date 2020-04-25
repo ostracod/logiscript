@@ -11,7 +11,7 @@ errorConstant_t errorConstantSet[] = {
     {(int8_t *)"TYPE_ERROR", TYPE_ERROR_CONSTANT},
     {(int8_t *)"NUMBER_ERROR", NUMBER_ERROR_CONSTANT},
     {(int8_t *)"DATA_ERROR", DATA_ERROR_CONSTANT},
-    {(int8_t *)"MISSING_ERROR", MISSING_ERROR_CONSTANT}
+    {(int8_t *)"STATE_ERROR", STATE_ERROR_CONSTANT}
 };
 
 bodyPos_t traceBodyPosList[MAXIMUM_STACK_TRACE_LENGTH];

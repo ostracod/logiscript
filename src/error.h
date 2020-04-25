@@ -10,9 +10,16 @@
 #define TYPE_ERROR_CONSTANT 0
 #define NUMBER_ERROR_CONSTANT 1
 #define DATA_ERROR_CONSTANT 2
-#define MISSING_ERROR_CONSTANT 3
+#define STATE_ERROR_CONSTANT 3
 
 #define MAXIMUM_STACK_TRACE_LENGTH 10
+
+#define THROW_BUILT_IN_ERROR(errorCode, ...) {\
+    int8_t *errorText;\
+    asprintf((char **)&errorText, __VA_ARGS__);\
+    throwBuiltInError(errorCode, errorText);\
+    free(errorText);\
+}
 
 typedef struct errorConstant {
     int8_t *name;

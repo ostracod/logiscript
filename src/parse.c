@@ -8,6 +8,7 @@
 #include "operator.h"
 #include "expression.h"
 #include "statement.h"
+#include "error.h"
 
 int8_t bodyPosGetCharacter(bodyPos_t *bodyPos) {
     return (bodyPos->script->body)[bodyPos->index];
@@ -350,12 +351,22 @@ void parseExpressionList(vector_t *destination, parser_t *parser, int8_t endChar
                 bodyPos->index += 1;
                 bodyPosSkipWhitespace(bodyPos);
             } else {
-                // TODO: Report parsing errors.
-                
+                if (endCharacter < 0) {
+                    THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected ',' or end of line.");
+                } else {
+                    THROW_BUILT_IN_ERROR(
+                        DATA_ERROR_CONSTANT,
+                        "Expected ',' or '%c'.",
+                        endCharacter
+                    );
+                }
                 return;
             }
         }
         baseExpression_t *tempExpression = parseExpression(parser, 99);
+        if (hasThrownError) {
+            return;
+        }
         pushVectorElement(destination, &tempExpression);
     }
 }
@@ -375,10 +386,14 @@ baseStatement_t *parseStatement(int8_t *hasReachedEnd, parser_t *parser) {
     output->base.type = STATEMENT_TYPE_INVOCATION;
     output->base.bodyPos = startBodyPos;
     output->function = parseExpression(parser, 3);
+    if (hasThrownError) {
+        return NULL;
+    }
     bodyPosSkipWhitespace(bodyPos);
     parseExpressionList(&(output->argumentList), parser, -1);
-    // TODO: Report parsing errors.
-    
+    if (hasThrownError) {
+        return NULL;
+    }
     *hasReachedEnd = !bodyPosSeekNextLine(bodyPos);
     return (baseStatement_t *)output;
 }
@@ -397,10 +412,23 @@ void parseStatementList(vector_t *destination, parser_t *parser, int8_t endChara
         }
         int8_t tempHasReachedEnd;
         baseStatement_t *baseStatement = parseStatement(&tempHasReachedEnd, parser);
+        if (hasThrownError) {
+            addBodyPosToStackTrace(bodyPos);
+            return;
+        }
         if (baseStatement != NULL) {
             pushVectorElement(destination, &baseStatement);
         }
         if (tempHasReachedEnd) {
+            if (endCharacter >= 0) {
+                THROW_BUILT_IN_ERROR(
+                    DATA_ERROR_CONSTANT,
+                    "Expected '%c'.",
+                    endCharacter
+                );
+                addBodyPosToStackTrace(bodyPos);
+                return;
+            }
             break;
         }
     }

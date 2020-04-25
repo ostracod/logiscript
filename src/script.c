@@ -17,9 +17,22 @@ script_t *importScript(int8_t *path) {
     hasThrownError = false;
     script_t *output = malloc(sizeof(script_t));
     output->path = mallocRealpath(path);
+    if (output->path == NULL) {
+        THROW_BUILT_IN_ERROR(
+            STATE_ERROR_CONSTANT,
+            "Could not read script at %s.",
+            path
+        );
+        return NULL;
+    }
     output->body = readEntireFile(&(output->bodyLength), output->path);
     if (output->body == NULL) {
         free(output);
+        THROW_BUILT_IN_ERROR(
+            STATE_ERROR_CONSTANT,
+            "Could not read script at %s.",
+            output->path
+        );
         return NULL;
     }
     
@@ -31,7 +44,6 @@ script_t *importScript(int8_t *path) {
     scope->aliasVariableAmount = 0;
     createEmptyVector(&(scope->variableList), sizeof(scopeVariable_t *));
     output->topLevelFunction = topLevelFunction;
-    // TODO: Create global frame of output.
     createEmptyVector(&(output->namespaceList), sizeof(namespace_t *));
     
     bodyPos_t bodyPos;
@@ -43,8 +55,17 @@ script_t *importScript(int8_t *path) {
     parser.customFunction = topLevelFunction;
     parser.bodyPos = &bodyPos;
     parseStatementList(&(topLevelFunction->statementList), &parser, -1);
+    if (hasThrownError) {
+        return NULL;
+    }
     resolveIdentifiersInFunction(topLevelFunction);
+    if (hasThrownError) {
+        return NULL;
+    }
     evaluateScript(output);
+    if (hasThrownError) {
+        return NULL;
+    }
     return output;
 }
 

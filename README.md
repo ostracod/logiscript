@@ -263,7 +263,7 @@ The following error number constants are used in built-in errors:
 * `TYPE_ERROR` &ndash; Thrown when a value has the wrong type
 * `NUMBER_ERROR` &ndash; Thrown when a number is not in an acceptable range
 * `DATA_ERROR` &ndash; Thrown when a data structure contains malformed data
-* `MISSING_ERROR` &ndash; Thrown when a necessary resource does not exist
+* `STATE_ERROR` &ndash; Thrown when a resource is in the wrong state or missing
 
 ## Example Scripts
 

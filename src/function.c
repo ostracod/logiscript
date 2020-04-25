@@ -42,12 +42,13 @@ void checkInvocationArgumentList(baseFunction_t *function, argumentList_t **argu
     int32_t argumentAmount = function->argumentAmount;
     if ((*argumentList)->count > argumentAmount) {
         if (argumentAmount == 1) {
-            throwBuiltInError(DATA_ERROR_CONSTANT, (int8_t *)"Expected at most 1 argument.");
+            THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected at most 1 argument.");
         } else {
-            int8_t *tempText;
-            asprintf((char **)&tempText, "Expected at most %d arguments.", argumentAmount);
-            throwBuiltInError(DATA_ERROR_CONSTANT, tempText);
-            free(tempText);
+            THROW_BUILT_IN_ERROR(
+                DATA_ERROR_CONSTANT,
+                "Expected at most %d arguments.",
+                argumentAmount
+            );
         }
     }
 }
