@@ -205,6 +205,7 @@ heapValue_t *invokeFunctionHandle(heapValue_t *functionHandle, argumentList_t *a
         getVectorElement(&tempStatement, &(customFunction->statementList), index);
         evaluateStatement(tempFrame, tempStatement);
         if (hasThrownError) {
+            addBodyPosToStackTrace(&(tempStatement->bodyPos));
             break;
         }
     }

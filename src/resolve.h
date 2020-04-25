@@ -15,6 +15,7 @@ typedef struct numberConstant {
     double value;
 } numberConstant_t;
 
+void initializeNumberConstants();
 void resolveIdentifiersInFunction(customFunction_t *function);
 
 // RESOLVE_HEADER_FILE
