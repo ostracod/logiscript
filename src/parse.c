@@ -138,6 +138,11 @@ void bodyPosSkipOperator(bodyPos_t *bodyPos, operator_t *operator) {
 
 int8_t *parseIdentifier(parser_t *parser) {
     bodyPos_t *bodyPos = parser->bodyPos;
+    int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+    if (!isFirstIdentifierCharacter(tempCharacter)) {
+        THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected identifier.");
+        return NULL;
+    }
     bodyPos_t startBodyPos = *bodyPos;
     bodyPosSeekEndOfIdentifier(bodyPos);
     int8_t *tempText = getBodyPosPointer(&startBodyPos);
@@ -147,192 +152,14 @@ int8_t *parseIdentifier(parser_t *parser) {
 
 // If endCharacter is -1, then this function will parse
 // identifiers until the end of a line.
-void parseIdentifierList(vector_t *destination, parser_t *parser, int8_t endCharacter) {
+void parseCommaSeparatedValues(
+    vector_t *destination,
+    parser_t *parser,
+    int8_t endCharacter,
+    void (*parseElement)(vector_t *, parser_t *)
+) {
     bodyPos_t *bodyPos = parser->bodyPos;
-    createEmptyVector(destination, sizeof(int8_t *));
-    while (true) {
-        bodyPosSkipWhitespace(bodyPos);
-        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
-        if (endCharacter < 0) {
-            if (characterIsEndOfLine(tempCharacter)) {
-                break;
-            }
-        } else {
-            if (tempCharacter == endCharacter) {
-                bodyPos->index += 1;
-                break;
-            }
-        }
-        if (destination->length > 0) {
-            if (tempCharacter == ',') {
-                bodyPos->index += 1;
-                bodyPosSkipWhitespace(bodyPos);
-            } else {
-                // TODO: Report parsing errors.
-                
-                return;
-            }
-        }
-        int8_t *tempIdentifier = parseIdentifier(parser);
-        pushVectorElement(destination, &tempIdentifier);
-    }
-}
-
-baseExpression_t *parseStringConstantExpression(parser_t *parser) {
-    bodyPos_t *bodyPos = parser->bodyPos;
-    heapValue_t *tempHeapValue = createHeapValue(VALUE_TYPE_STRING);
-    vector_t *tempText = &(tempHeapValue->vector);
-    createEmptyVector(tempText, 1);
-    int8_t tempIsEscaped = false;
-    while (true) {
-        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
-        if (characterIsEndOfLine(tempCharacter)) {
-            // TODO: Report parsing error.
-            
-            return NULL;
-        }
-        if (tempIsEscaped) {
-            tempCharacter = escapeCharacter(tempCharacter);
-            pushVectorElement(tempText, &tempCharacter);
-            tempIsEscaped = false;
-        } else {
-            if (tempCharacter == '"') {
-                break;
-            } else if (tempCharacter == '\\') {
-                tempIsEscaped = true;
-            } else {
-                pushVectorElement(tempText, &tempCharacter);
-            }
-        }
-        bodyPos->index += 1;
-    }
-    bodyPos->index += 1;
-    int8_t tempCharacter = 0;
-    pushVectorElement(tempText, &tempCharacter);
-    value_t tempValue = createValueFromHeapValue(tempHeapValue);
-    return createConstantExpression(tempValue);
-}
-
-baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
-    // TODO: Report parsing errors.
-    customFunction_t *lastCustomFunction = parser->customFunction;
-    vector_t identifierList;
-    parseIdentifierList(&identifierList, parser, -1);
-    bodyPosSeekNextLine(parser->bodyPos);
-    int32_t argumentAmount = (int32_t)(identifierList.length);
-    customFunction_t *customFunction = malloc(sizeof(customFunction_t));
-    customFunction->base.type = FUNCTION_TYPE_CUSTOM;
-    customFunction->base.argumentAmount = argumentAmount;
-    scope_t *tempScope = &(customFunction->scope);
-    tempScope->parentScope = &(lastCustomFunction->scope);
-    tempScope->aliasVariableAmount = 0;
-    createEmptyVector(&(tempScope->variableList), sizeof(scopeVariable_t *));
-    for (int32_t index = 0; index < argumentAmount; index++) {
-        int8_t *tempIdentifier;
-        getVectorElement(&tempIdentifier, &identifierList, index);
-        scopeAddVariable(tempScope, tempIdentifier, -1);
-    }
-    cleanUpVector(&identifierList);
-    parser->customFunction = customFunction;
-    parseStatementList(&(customFunction->statementList), parser, '}');
-    parser->customFunction = lastCustomFunction;
-    return createCustomFunctionExpression(customFunction);
-}
-
-void parseExpressionList(vector_t *destination, parser_t *parser, int8_t endCharacter);
-
-baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
-    bodyPos_t *bodyPos = parser->bodyPos;
-    bodyPosSkipWhitespace(bodyPos);
-    baseExpression_t *output = NULL;
-    operator_t *tempOperator = bodyPosGetOperator(bodyPos, OPERATOR_ARRANGEMENT_UNARY);
-    if (tempOperator == NULL) {
-        int8_t firstCharacter = bodyPosGetCharacter(bodyPos);
-        if (isFirstIdentifierCharacter(firstCharacter)) {
-            int8_t *tempIdentifier = parseIdentifier(parser);
-            output = createIdentifierExpression(tempIdentifier);
-        } else if (isNumberCharacter(firstCharacter)) {
-            bodyPos_t startBodyPos = *bodyPos;
-            bodyPosSeekEndOfNumber(bodyPos);
-            // TODO: Detect malformed numbers.
-            int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
-            int8_t tempText[tempLength + 1];
-            memcpy(tempText, getBodyPosPointer(&startBodyPos), tempLength);
-            tempText[tempLength] = 0;
-            double tempNumber;
-            sscanf((char *)tempText, "%lf", &tempNumber);
-            value_t tempValue;
-            tempValue.type = VALUE_TYPE_NUMBER;
-            tempValue.numberValue = tempNumber;
-            output = createConstantExpression(tempValue);
-        } else {
-            switch (firstCharacter) {
-                case '"':
-                {
-                    bodyPos->index += 1;
-                    output = parseStringConstantExpression(parser);
-                    break;
-                }
-                case '[':
-                {
-                    bodyPos->index += 1;
-                    vector_t tempList;
-                    parseExpressionList(&tempList, parser, ']');
-                    output = createListExpression(&tempList);
-                    break;
-                }
-                case '{':
-                {
-                    bodyPos->index += 1;
-                    output = parseCustomFunctionExpression(parser);
-                    break;
-                }
-                // TODO: Handle more types of expressions.
-                
-                default:
-                {
-                    break;
-                }
-            }
-        }
-    } else {
-        bodyPosSkipOperator(bodyPos, tempOperator);
-        baseExpression_t *tempOperand = parseExpression(parser, 0);
-        if (tempOperator->number == OPERATOR_DECLARE) {
-            // TODO: Make sure that tempOperand is an identifier expression.
-            identifierExpression_t *identifierExpression = (identifierExpression_t *)tempOperand;
-            scopeAddVariable(
-                &(parser->customFunction->scope),
-                identifierExpression->name,
-                -1
-            );
-            output = tempOperand;
-        } else {
-            output = createUnaryExpression(tempOperator, tempOperand);
-        }
-    }
-    while (true) {
-        bodyPosSkipWhitespace(bodyPos);
-        int8_t hasProcessedExpression = false;
-        tempOperator = bodyPosGetOperator(bodyPos, OPERATOR_ARRANGEMENT_BINARY);
-        if (tempOperator != NULL && tempOperator->precedence < precedence) {
-            bodyPosSkipOperator(bodyPos, tempOperator);
-            baseExpression_t *tempOperand = parseExpression(parser, tempOperator->precedence);
-            output = createBinaryExpression(tempOperator, output, tempOperand);
-            hasProcessedExpression = true;
-        }
-        if (!hasProcessedExpression) {
-            break;
-        }
-    }
-    return output;
-}
-
-// If endCharacter is -1, then this function will parse
-// expressions until the end of a line.
-void parseExpressionList(vector_t *destination, parser_t *parser, int8_t endCharacter) {
-    bodyPos_t *bodyPos = parser->bodyPos;
-    createEmptyVector(destination, sizeof(baseExpression_t *));
+    createEmptyVector(destination, sizeof(void *));
     while (true) {
         bodyPosSkipWhitespace(bodyPos);
         int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
@@ -363,12 +190,244 @@ void parseExpressionList(vector_t *destination, parser_t *parser, int8_t endChar
                 return;
             }
         }
-        baseExpression_t *tempExpression = parseExpression(parser, 99);
+        parseElement(destination, parser);
         if (hasThrownError) {
             return;
         }
-        pushVectorElement(destination, &tempExpression);
     }
+}
+
+void parseIdentifierListHelper(vector_t *destination, parser_t *parser) {
+    int8_t *tempIdentifier = parseIdentifier(parser);
+    if (hasThrownError) {
+        return;
+    }
+    pushVectorElement(destination, &tempIdentifier);
+}
+
+void parseIdentifierList(vector_t *destination, parser_t *parser, int8_t endCharacter) {
+    parseCommaSeparatedValues(
+        destination,
+        parser,
+        endCharacter,
+        parseIdentifierListHelper
+    );
+}
+
+baseExpression_t *parseStringConstantExpression(parser_t *parser) {
+    bodyPos_t *bodyPos = parser->bodyPos;
+    heapValue_t *tempHeapValue = createHeapValue(VALUE_TYPE_STRING);
+    vector_t *tempText = &(tempHeapValue->vector);
+    createEmptyVector(tempText, 1);
+    int8_t tempIsEscaped = false;
+    while (true) {
+        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+        if (characterIsEndOfLine(tempCharacter)) {
+            THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected '\"'.");
+            return NULL;
+        }
+        if (tempIsEscaped) {
+            tempCharacter = escapeCharacter(tempCharacter);
+            pushVectorElement(tempText, &tempCharacter);
+            tempIsEscaped = false;
+        } else {
+            if (tempCharacter == '"') {
+                break;
+            } else if (tempCharacter == '\\') {
+                tempIsEscaped = true;
+            } else {
+                pushVectorElement(tempText, &tempCharacter);
+            }
+        }
+        bodyPos->index += 1;
+    }
+    bodyPos->index += 1;
+    int8_t tempCharacter = 0;
+    pushVectorElement(tempText, &tempCharacter);
+    value_t tempValue = createValueFromHeapValue(tempHeapValue);
+    return createConstantExpression(tempValue);
+}
+
+baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
+    customFunction_t *lastCustomFunction = parser->customFunction;
+    vector_t identifierList;
+    parseIdentifierList(&identifierList, parser, -1);
+    if (hasThrownError) {
+        return NULL;
+    }
+    bodyPosSeekNextLine(parser->bodyPos);
+    int32_t argumentAmount = (int32_t)(identifierList.length);
+    customFunction_t *customFunction = malloc(sizeof(customFunction_t));
+    customFunction->base.type = FUNCTION_TYPE_CUSTOM;
+    customFunction->base.argumentAmount = argumentAmount;
+    scope_t *tempScope = &(customFunction->scope);
+    tempScope->parentScope = &(lastCustomFunction->scope);
+    tempScope->aliasVariableAmount = 0;
+    createEmptyVector(&(tempScope->variableList), sizeof(scopeVariable_t *));
+    for (int32_t index = 0; index < argumentAmount; index++) {
+        int8_t *tempIdentifier;
+        getVectorElement(&tempIdentifier, &identifierList, index);
+        scopeAddVariable(tempScope, tempIdentifier, -1);
+    }
+    cleanUpVector(&identifierList);
+    parser->customFunction = customFunction;
+    parseStatementList(&(customFunction->statementList), parser, '}');
+    if (hasThrownError) {
+        return NULL;
+    }
+    parser->customFunction = lastCustomFunction;
+    return createCustomFunctionExpression(customFunction);
+}
+
+void parseExpressionList(vector_t *destination, parser_t *parser, int8_t endCharacter);
+
+baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
+    bodyPos_t *bodyPos = parser->bodyPos;
+    bodyPosSkipWhitespace(bodyPos);
+    baseExpression_t *output = NULL;
+    operator_t *tempOperator = bodyPosGetOperator(bodyPos, OPERATOR_ARRANGEMENT_UNARY);
+    if (tempOperator == NULL) {
+        int8_t firstCharacter = bodyPosGetCharacter(bodyPos);
+        if (isFirstIdentifierCharacter(firstCharacter)) {
+            int8_t *tempIdentifier = parseIdentifier(parser);
+            if (hasThrownError) {
+                return NULL;
+            }
+            output = createIdentifierExpression(tempIdentifier);
+        } else if (isNumberCharacter(firstCharacter)) {
+            bodyPos_t startBodyPos = *bodyPos;
+            bodyPosSeekEndOfNumber(bodyPos);
+            int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
+            int8_t tempText[tempLength + 1];
+            memcpy(tempText, getBodyPosPointer(&startBodyPos), tempLength);
+            tempText[tempLength] = 0;
+            int8_t decimalPointCount = 0;
+            for (int64_t index = 0; index < tempLength; index++) {
+                int8_t tempCharacter = tempText[index];
+                if (tempCharacter == '.') {
+                    decimalPointCount += 1;
+                    if (decimalPointCount > 1) {
+                        THROW_BUILT_IN_ERROR(
+                            DATA_ERROR_CONSTANT,
+                            "Malformed number literal."
+                        );
+                        return NULL;
+                    }
+                }
+            }
+            double tempNumber;
+            int32_t tempResult = sscanf((char *)tempText, "%lf", &tempNumber);
+            if (tempResult < 1) {
+                THROW_BUILT_IN_ERROR(
+                    DATA_ERROR_CONSTANT,
+                    "Malformed number literal."
+                );
+                return NULL;
+            }
+            value_t tempValue;
+            tempValue.type = VALUE_TYPE_NUMBER;
+            tempValue.numberValue = tempNumber;
+            output = createConstantExpression(tempValue);
+        } else {
+            switch (firstCharacter) {
+                case '"':
+                {
+                    bodyPos->index += 1;
+                    output = parseStringConstantExpression(parser);
+                    break;
+                }
+                case '[':
+                {
+                    bodyPos->index += 1;
+                    vector_t tempList;
+                    parseExpressionList(&tempList, parser, ']');
+                    output = createListExpression(&tempList);
+                    break;
+                }
+                case '{':
+                {
+                    bodyPos->index += 1;
+                    output = parseCustomFunctionExpression(parser);
+                    break;
+                }
+                // TODO: Handle more types of expressions.
+                
+                default:
+                {
+                    THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected expression.");
+                    return NULL;
+                }
+            }
+            if (hasThrownError) {
+                return NULL;
+            }
+        }
+    } else {
+        bodyPosSkipOperator(bodyPos, tempOperator);
+        baseExpression_t *tempOperand = parseExpression(parser, 0);
+        if (hasThrownError) {
+            return NULL;
+        }
+        if (tempOperator->number == OPERATOR_DECLARE) {
+            if (tempOperand->type != EXPRESSION_TYPE_IDENTIFIER) {
+                THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected identifier.");
+                return NULL;
+            }
+            identifierExpression_t *identifierExpression = (identifierExpression_t *)tempOperand;
+            scopeAddVariable(
+                &(parser->customFunction->scope),
+                identifierExpression->name,
+                -1
+            );
+            output = tempOperand;
+        } else {
+            output = createUnaryExpression(tempOperator, tempOperand);
+        }
+    }
+    while (true) {
+        bodyPosSkipWhitespace(bodyPos);
+        tempOperator = bodyPosGetOperator(bodyPos, OPERATOR_ARRANGEMENT_BINARY);
+        if (tempOperator != NULL && tempOperator->precedence < precedence) {
+            if (tempOperator->number == OPERATOR_NAMESPACE) {
+                // Since the namespace operator is a period, we need
+                // to have special logic to handle number literals.
+                bodyPos_t tempBodyPos = *bodyPos;
+                bodyPosSkipOperator(&tempBodyPos, tempOperator);
+                int8_t tempCharacter = bodyPosGetCharacter(&tempBodyPos);
+                if (isNumberCharacter(tempCharacter)) {
+                    break;
+                }
+                *bodyPos = tempBodyPos;
+            } else {
+                bodyPosSkipOperator(bodyPos, tempOperator);
+            }
+            baseExpression_t *tempOperand = parseExpression(parser, tempOperator->precedence);
+            if (hasThrownError) {
+                return NULL;
+            }
+            output = createBinaryExpression(tempOperator, output, tempOperand);
+        } else {
+            break;
+        }
+    }
+    return output;
+}
+
+void parseExpressionListHelper(vector_t *destination, parser_t *parser) {
+    baseExpression_t *tempExpression = parseExpression(parser, 99);
+    if (hasThrownError) {
+        return;
+    }
+    pushVectorElement(destination, &tempExpression);
+}
+
+void parseExpressionList(vector_t *destination, parser_t *parser, int8_t endCharacter) {
+    parseCommaSeparatedValues(
+        destination,
+        parser,
+        endCharacter,
+        parseExpressionListHelper
+    );
 }
 
 baseStatement_t *parseStatement(int8_t *hasReachedEnd, parser_t *parser) {
@@ -413,7 +472,6 @@ void parseStatementList(vector_t *destination, parser_t *parser, int8_t endChara
         int8_t tempHasReachedEnd;
         baseStatement_t *baseStatement = parseStatement(&tempHasReachedEnd, parser);
         if (hasThrownError) {
-            addBodyPosToStackTrace(bodyPos);
             return;
         }
         if (baseStatement != NULL) {
@@ -426,7 +484,6 @@ void parseStatementList(vector_t *destination, parser_t *parser, int8_t endChara
                     "Expected '%c'.",
                     endCharacter
                 );
-                addBodyPosToStackTrace(bodyPos);
                 return;
             }
             break;

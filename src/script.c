@@ -56,6 +56,7 @@ script_t *importScript(int8_t *path) {
     parser.bodyPos = &bodyPos;
     parseStatementList(&(topLevelFunction->statementList), &parser, -1);
     if (hasThrownError) {
+        addBodyPosToStackTrace(parser.bodyPos);
         return NULL;
     }
     resolveIdentifiersInFunction(topLevelFunction);
