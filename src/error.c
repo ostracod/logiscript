@@ -117,4 +117,11 @@ void printStackTrace() {
     }
 }
 
+int32_t getStackTraceLength() {
+    if (!hasThrownError) {
+        return 0;
+    }
+    return traceBodyPosIndex;
+}
+
 

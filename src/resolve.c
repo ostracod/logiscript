@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "utilities.h"
 #include "resolve.h"
 #include "expression.h"
 #include "statement.h"
@@ -55,7 +56,7 @@ scopeVariable_t *resolveIdentifierInScope(scope_t *scope, int8_t *identifier) {
     if (tempVariable == NULL) {
         return NULL;
     }
-    return scopeAddVariable(scope, identifier, tempVariable->scopeIndex);
+    return scopeAddVariable(scope, identifier, tempVariable->scopeIndex, true);
 }
 
 baseExpression_t *resolveIdentifierExpression(
@@ -88,6 +89,11 @@ baseExpression_t *resolveIdentifierExpression(
     }
     // TODO: Resolve other types of identifiers.
     
+    THROW_BUILT_IN_ERROR(
+        DATA_ERROR_CONSTANT,
+        "Unknown identifier \"%s\".",
+        tempName
+    );
     return NULL;
 }
 
@@ -117,6 +123,9 @@ void resolveIdentifiersInExpression(
                     index
                 );
                 resolveIdentifiersInExpression(scope, tempElementExpression);
+                if (hasThrownError) {
+                    return;
+                }
             }
             break;
         }
@@ -130,6 +139,9 @@ void resolveIdentifiersInExpression(
         {
             binaryExpression_t *binaryExpression = (binaryExpression_t *)tempExpression;
             resolveIdentifiersInExpression(scope, &(binaryExpression->operand1));
+            if (hasThrownError) {
+                return;
+            }
             resolveIdentifiersInExpression(scope, &(binaryExpression->operand2));
             break;
         }
@@ -153,12 +165,18 @@ void resolveIdentifiersInStatement(scope_t *scope, baseStatement_t *statement) {
     if (statement->type == STATEMENT_TYPE_INVOCATION) {
         invocationStatement_t *invocationStatement = (invocationStatement_t *)statement;
         resolveIdentifiersInExpression(scope, &(invocationStatement->function));
+        if (hasThrownError) {
+            return;
+        }
         for (int32_t index = 0; index < invocationStatement->argumentList.length; index++) {
             baseExpression_t **tempExpression = findVectorElement(
                 &(invocationStatement->argumentList),
                 index
             );
             resolveIdentifiersInExpression(scope, tempExpression);
+            if (hasThrownError) {
+                return;
+            }
         }
     }
     // TODO: Resolve identifiers in other statement types.
@@ -170,6 +188,12 @@ void resolveIdentifiersInFunction(customFunction_t *function) {
         baseStatement_t *tempStatement;
         getVectorElement(&tempStatement, &(function->statementList), index);
         resolveIdentifiersInStatement(&(function->scope), tempStatement);
+        if (hasThrownError) {
+            if (getStackTraceLength() <= 0) {
+                addBodyPosToStackTrace(&(tempStatement->bodyPos));
+            }
+            return;
+        }
     }
 }
 

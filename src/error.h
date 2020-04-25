@@ -35,6 +35,7 @@ void throwError(int32_t channel, value_t value);
 void throwBuiltInError(int32_t errorCode, int8_t *message);
 void addBodyPosToStackTrace(bodyPos_t *bodyPos);
 void printStackTrace();
+int32_t getStackTraceLength();
 
 // ERROR_HEADER_FILE
 #endif

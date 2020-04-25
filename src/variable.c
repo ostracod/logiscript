@@ -6,8 +6,27 @@
 #include "utilities.h"
 #include "function.h"
 #include "variable.h"
+#include "error.h"
 
-scopeVariable_t *scopeAddVariable(scope_t *scope, int8_t *name, int32_t parentScopeIndex) {
+scopeVariable_t *scopeAddVariable(
+    scope_t *scope,
+    int8_t *name,
+    int32_t parentScopeIndex,
+    int8_t allowDuplicates
+) {
+    scopeVariable_t *tempVariable = scopeFindVariable(scope, name);
+    if (tempVariable != NULL) {
+        if (allowDuplicates) {
+            return tempVariable;
+        } else {
+            THROW_BUILT_IN_ERROR(
+                DATA_ERROR_CONSTANT,
+                "Duplicate variable \"%s\".",
+                name
+            );
+            return NULL;
+        }
+    }
     scopeVariable_t *output = malloc(sizeof(scopeVariable_t));
     output->name = name;
     output->scopeIndex = scope->variableList.length;

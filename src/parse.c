@@ -267,7 +267,10 @@ baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
     for (int32_t index = 0; index < argumentAmount; index++) {
         int8_t *tempIdentifier;
         getVectorElement(&tempIdentifier, &identifierList, index);
-        scopeAddVariable(tempScope, tempIdentifier, -1);
+        scopeAddVariable(tempScope, tempIdentifier, -1, false);
+    }
+    if (hasThrownError) {
+        return NULL;
     }
     cleanUpVector(&identifierList);
     parser->customFunction = customFunction;
@@ -377,7 +380,8 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             scopeAddVariable(
                 &(parser->customFunction->scope),
                 identifierExpression->name,
-                -1
+                -1,
+                true
             );
             output = tempOperand;
         } else {

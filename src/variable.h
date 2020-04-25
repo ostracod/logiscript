@@ -24,7 +24,12 @@ typedef struct scope {
     vector_t variableList; // Vector of pointers to scopeVariable_t.
 } scope_t;
 
-scopeVariable_t *scopeAddVariable(scope_t *scope, int8_t *name, int32_t parentScopeIndex);
+scopeVariable_t *scopeAddVariable(
+    scope_t *scope,
+    int8_t *name,
+    int32_t parentScopeIndex,
+    int8_t allowDuplicates
+);
 scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name);
 alias_t getAliasToFrameVariable(heapValue_t *frame, int32_t index);
 
