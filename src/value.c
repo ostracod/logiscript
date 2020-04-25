@@ -19,8 +19,125 @@ heapValue_t *createHeapValue(int8_t type) {
     }
     output->lockDepth = 0;
     output->referenceCount = 0;
+    output->aliasCount = 0;
     firstHeapValue = output;
     return output;
+}
+
+void removeValueReferenceHelper(value_t *value, int8_t shouldRecur);
+
+void deleteHeapValue(heapValue_t *value, int8_t shouldRecur) {
+    if (value->previous == NULL) {
+        firstHeapValue = value->next;
+    } else {
+        value->previous->next = value->next;
+    }
+    if (value->next != NULL) {
+        value->next->previous = value->previous;
+    }
+    switch (value->type) {
+        case VALUE_TYPE_STRING:
+        {
+            vector_t *tempVector = &(value->vector);
+            cleanUpVector(tempVector);
+            break;
+        }
+        case VALUE_TYPE_LIST:
+        {
+            vector_t *tempVector = &(value->vector);
+            for (int64_t index = 0; index < tempVector->length; index++) {
+                value_t *tempValue = findVectorElement(tempVector, index);
+                removeValueReferenceHelper(tempValue, shouldRecur);
+            }
+            cleanUpVector(tempVector);
+            break;
+        }
+        case VALUE_TYPE_FRAME:
+        {
+            valueList_t *tempValueList = &(value->frameVariableList);
+            for (int32_t index = 0; index < tempValueList->length; index++) {
+                value_t *tempValue = tempValueList->valueArray + index;
+                removeValueReferenceHelper(tempValue, shouldRecur);
+            }
+            free(tempValueList->valueArray);
+            break;
+        }
+        case VALUE_TYPE_CUSTOM_FUNCTION:
+        {
+            customFunctionHandle_t *tempHandle = value->customFunctionHandle;
+            int32_t tempLength = tempHandle->function->scope.aliasVariableAmount;
+            for (int32_t index = 0; index < tempLength; index++) {
+                // TODO: Finish implementing.
+                
+            }
+            free(tempHandle->aliasList);
+            free(tempHandle);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    free(value);
+}
+
+// TODO: Decide whether alias values should be resolved.
+int8_t valueIsInHeap(value_t *value) {
+    int8_t tempType = value->type;
+    return (tempType == VALUE_TYPE_STRING || tempType == VALUE_TYPE_LIST
+            || tempType == VALUE_TYPE_FRAME || tempType == VALUE_TYPE_CUSTOM_FUNCTION);
+}
+
+void deleteHeapValueIfUnreferenced(heapValue_t *value) {
+    // TODO: Update this to work with aliasCount.
+    if (value->referenceCount <= 0 && value->lockDepth <= 0) {
+        deleteHeapValue(value, true);
+    }
+}
+
+void lockValue(value_t *value) {
+    if (!valueIsInHeap(value)) {
+        return;
+    }
+    value->heapValue->lockDepth += 1;
+}
+
+void unlockValue(value_t *value) {
+    if (!valueIsInHeap(value)) {
+        return;
+    }
+    heapValue_t *tempHeapValue = value->heapValue;
+    tempHeapValue->lockDepth -= 1;
+    deleteHeapValueIfUnreferenced(tempHeapValue);
+}
+
+void addValueReference(value_t *value) {
+    if (!valueIsInHeap(value)) {
+        return;
+    }
+    value->heapValue->referenceCount += 1;
+}
+
+void removeValueReferenceHelper(value_t *value, int8_t shouldRecur) {
+    if (!valueIsInHeap(value)) {
+        return;
+    }
+    heapValue_t *tempHeapValue = value->heapValue;
+    tempHeapValue->referenceCount -= 1;
+    if (shouldRecur) {
+        deleteHeapValueIfUnreferenced(tempHeapValue);
+    }
+}
+
+void removeValueReference(value_t *value) {
+    removeValueReferenceHelper(value, true);
+}
+
+void swapValueReference(value_t *destination, value_t *source) {
+    addValueReference(source);
+    removeValueReference(destination);
+    *destination = *source;
 }
 
 value_t createValueFromHeapValue(heapValue_t *heapValue) {
@@ -130,7 +247,7 @@ value_t readValueFromAlias(alias_t alias) {
     heapValue_t *heapValue = alias.container;
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
-        return heapValue->frameVariableList[index];
+        return heapValue->frameVariableList.valueArray[index];
     }
     // TODO: Read from more types of heap values.
     
@@ -143,7 +260,7 @@ void writeValueToAlias(alias_t alias, value_t value) {
     heapValue_t *heapValue = alias.container;
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
-        heapValue->frameVariableList[index] = value;
+        heapValue->frameVariableList.valueArray[index] = value;
     }
     // TODO: Write to more types of heap values.
     

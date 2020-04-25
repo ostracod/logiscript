@@ -106,18 +106,18 @@ void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
         }
         functionValue = resolveAliasValue(functionValue);
         int32_t tempLength = (int32_t)(invocationStatement->argumentList.length);
-        value_t tempValueList[tempLength];
+        value_t tempValueArray[tempLength];
         for (int32_t index = 0; index < tempLength; index++) {
             baseExpression_t *tempExpression;
             getVectorElement(&tempExpression, &(invocationStatement->argumentList), index);
-            tempValueList[index] = evaluateExpression(frame, tempExpression);
+            tempValueArray[index] = evaluateExpression(frame, tempExpression);
             if (hasThrownError) {
                 return;
             }
         }
-        argumentList_t argumentList;
-        argumentList.valueList = tempValueList;
-        argumentList.count = tempLength;
+        valueList_t argumentList;
+        argumentList.valueArray = tempValueArray;
+        argumentList.length = tempLength;
         invokeFunction(functionValue, &argumentList);
     }
     // TODO: Evaluate other types of statements.

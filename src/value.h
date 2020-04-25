@@ -37,6 +37,11 @@ typedef struct value {
     };
 } value_t;
 
+typedef struct valueList {
+    value_t *valueArray;
+    int32_t length;
+} valueList_t;
+
 typedef struct customFunctionHandle customFunctionHandle_t;
 
 typedef struct heapValue {
@@ -44,15 +49,16 @@ typedef struct heapValue {
     int8_t isMarked;
     int32_t lockDepth;
     int64_t referenceCount;
+    int64_t aliasCount;
     heapValue_t *previous;
     heapValue_t *next;
     // For strings, the union is a vector of int8_t.
     // For lists, the union is a vector of value_t.
-    // For frames, the union is an array of value_t.
-    // For custom functions, the union is a customFunctionHandle_t.
+    // For frames, the union is a valueList_t.
+    // For custom functions, the union is a pointer to customFunctionHandle_t.
     union {
         vector_t vector;
-        value_t *frameVariableList;
+        valueList_t frameVariableList;
         customFunctionHandle_t *customFunctionHandle;
     };
 } heapValue_t;
