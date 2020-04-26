@@ -68,7 +68,6 @@ operator_t *getOperatorInText(int8_t *text, int8_t operatorArrangement) {
 }
 
 value_t calculateUnaryOperator(operator_t *operator, value_t operand) {
-    operand = resolveAliasValue(operand);
     value_t output;
     output.type = VALUE_TYPE_VOID;
     if (operand.type != VALUE_TYPE_NUMBER) {
@@ -98,8 +97,6 @@ value_t calculateBinaryOperator(
     value_t operand1,
     value_t operand2
 ) {
-    operand1 = resolveAliasValue(operand1);
-    operand2 = resolveAliasValue(operand2);
     value_t output;
     output.type = VALUE_TYPE_VOID;
     int8_t hasProcessedOperator = true;

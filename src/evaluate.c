@@ -10,14 +10,17 @@
 #include "value.h"
 #include "error.h"
 
-value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
-    value_t output;
-    output.type = VALUE_TYPE_VOID;
+value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expression);
+
+hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
+    hyperValue_t output;
+    output.type = HYPER_VALUE_TYPE_VALUE;
+    output.value.type = VALUE_TYPE_VOID;
     switch (expression->type) {
         case EXPRESSION_TYPE_CONSTANT:
         {
             constantExpression_t *constantExpression = (constantExpression_t *)expression;
-            output = copyValue(constantExpression->value);
+            output.value = copyValue(constantExpression->value);
             break;
         }
         case EXPRESSION_TYPE_LIST:
@@ -32,23 +35,25 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
                     &(listExpression->expressionList),
                     index
                 );
-                value_t tempValue = evaluateExpression(frame, tempElementExpression);
+                value_t tempValue = evaluateAndResolveExpression(
+                    frame,
+                    tempElementExpression
+                );
                 if (hasThrownError) {
                     return output;
                 }
-                tempValue = resolveAliasValue(tempValue);
                 pushVectorElement(&tempValueList, &tempValue);
             }
             heapValue_t *tempHeapValue = createHeapValue(VALUE_TYPE_LIST);
             tempHeapValue->vector = tempValueList;
-            output = createValueFromHeapValue(tempHeapValue);
+            output.value = createValueFromHeapValue(tempHeapValue);
             break;
         }
         case EXPRESSION_TYPE_VARIABLE:
         {
             variableExpression_t *variableExpression = (variableExpression_t *)expression;
             int32_t tempScopeIndex = variableExpression->variable->scopeIndex;
-            output.type = VALUE_TYPE_ALIAS;
+            output.type = HYPER_VALUE_TYPE_ALIAS;
             output.alias = getAliasToFrameVariable(frame, tempScopeIndex);
             break;
         }
@@ -56,26 +61,35 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
         {
             unaryExpression_t *unaryExpression = (unaryExpression_t *)expression;
             operator_t *tempOperator = unaryExpression->operator;
-            value_t tempOperand = evaluateExpression(frame, unaryExpression->operand);
+            value_t tempOperand = evaluateAndResolveExpression(
+                frame,
+                unaryExpression->operand
+            );
             if (hasThrownError) {
                 return output;
             }
-            output = calculateUnaryOperator(tempOperator, tempOperand);
+            output.value = calculateUnaryOperator(tempOperator, tempOperand);
             break;
         }
         case EXPRESSION_TYPE_BINARY:
         {
             binaryExpression_t *binaryExpression = (binaryExpression_t *)expression;
             operator_t *tempOperator = binaryExpression->operator;
-            value_t tempOperand1 = evaluateExpression(frame, binaryExpression->operand1);
+            value_t tempOperand1 = evaluateAndResolveExpression(
+                frame,
+                binaryExpression->operand1
+            );
             if (hasThrownError) {
                 return output;
             }
-            value_t tempOperand2 = evaluateExpression(frame, binaryExpression->operand2);
+            value_t tempOperand2 = evaluateAndResolveExpression(
+                frame,
+                binaryExpression->operand2
+            );
             if (hasThrownError) {
                 return output;
             }
-            output = calculateBinaryOperator(tempOperator, tempOperand1, tempOperand2);
+            output.value = calculateBinaryOperator(tempOperator, tempOperand1, tempOperand2);
             break;
         }
         case EXPRESSION_TYPE_FUNCTION:
@@ -84,7 +98,7 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
                 frame,
                 ((customFunctionExpression_t *)expression)->customFunction
             );
-            output = createValueFromHeapValue(tempHandle);
+            output.value = createValueFromHeapValue(tempHandle);
             break;
         }
         // TODO: Evaluate other types of expressions.
@@ -97,16 +111,28 @@ value_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
     return output;
 }
 
+value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expression) {
+    hyperValue_t tempHyperValue = evaluateExpression(frame, expression);
+    if (hasThrownError) {
+        value_t output;
+        output.type = VALUE_TYPE_VOID;
+        return output;
+    }
+    return resolveAliasValue(tempHyperValue);
+}
+
 void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
     if (statement->type == STATEMENT_TYPE_INVOCATION) {
         invocationStatement_t *invocationStatement = (invocationStatement_t *)statement;
-        value_t functionValue = evaluateExpression(frame, invocationStatement->function);
+        value_t functionValue = evaluateAndResolveExpression(
+            frame,
+            invocationStatement->function
+        );
         if (hasThrownError) {
             return;
         }
-        functionValue = resolveAliasValue(functionValue);
         int32_t tempLength = (int32_t)(invocationStatement->argumentList.length);
-        value_t tempValueArray[tempLength];
+        hyperValue_t tempValueArray[tempLength];
         for (int32_t index = 0; index < tempLength; index++) {
             baseExpression_t *tempExpression;
             getVectorElement(&tempExpression, &(invocationStatement->argumentList), index);
@@ -115,7 +141,7 @@ void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
                 return;
             }
         }
-        valueList_t argumentList;
+        hyperValueList_t argumentList;
         argumentList.valueArray = tempValueArray;
         argumentList.length = tempLength;
         invokeFunction(functionValue, &argumentList);

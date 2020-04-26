@@ -54,10 +54,10 @@ void deleteHeapValue(heapValue_t *value, int8_t shouldRecur) {
         }
         case VALUE_TYPE_FRAME:
         {
-            valueList_t *tempValueList = &(value->frameVariableList);
+            hyperValueList_t *tempValueList = &(value->frameVariableList);
             for (int32_t index = 0; index < tempValueList->length; index++) {
-                value_t *tempValue = tempValueList->valueArray + index;
-                removeValueReferenceHelper(tempValue, shouldRecur);
+                // TODO: Finish implementing.
+                
             }
             free(tempValueList->valueArray);
             break;
@@ -247,7 +247,10 @@ value_t readValueFromAlias(alias_t alias) {
     heapValue_t *heapValue = alias.container;
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
-        return heapValue->frameVariableList.valueArray[index];
+        hyperValue_t *tempValue = heapValue->frameVariableList.valueArray + index;
+        // Note: tempValue cannot have type HYPER_VALUE_TYPE_ALIAS,
+        // because this is an invariant of alias_t.
+        return tempValue->value;
     }
     // TODO: Read from more types of heap values.
     
@@ -260,21 +263,24 @@ void writeValueToAlias(alias_t alias, value_t value) {
     heapValue_t *heapValue = alias.container;
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
-        heapValue->frameVariableList.valueArray[index] = value;
+        hyperValue_t *tempValue = heapValue->frameVariableList.valueArray + index;
+        // Note: tempValue cannot have type HYPER_VALUE_TYPE_ALIAS,
+        // because this is an invariant of alias_t.
+        tempValue->value = value;
     }
     // TODO: Write to more types of heap values.
     
 }
 
-value_t resolveAliasValue(value_t value) {
-    if (value.type == VALUE_TYPE_ALIAS) {
-        return readValueFromAlias(value.alias);
+value_t resolveAliasValue(hyperValue_t hyperValue) {
+    if (hyperValue.type == HYPER_VALUE_TYPE_ALIAS) {
+        return readValueFromAlias(hyperValue.alias);
     }
-    return value;
+    return hyperValue.value;
 }
 
-void writeValueToAliasValue(value_t aliasValue, value_t value) {
-    if (aliasValue.type != VALUE_TYPE_ALIAS) {
+void writeValueToAliasValue(hyperValue_t aliasValue, value_t value) {
+    if (aliasValue.type != HYPER_VALUE_TYPE_ALIAS) {
         THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected alias to value.");
         return;
     }

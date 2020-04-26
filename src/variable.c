@@ -50,13 +50,13 @@ scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name) {
 }
 
 alias_t getAliasToFrameVariable(heapValue_t *frame, int32_t index) {
-    alias_t tempAlias;
-    tempAlias.container = frame;
-    tempAlias.index = index;
-    value_t tempValue = readValueFromAlias(tempAlias);
-    if (tempValue.type == VALUE_TYPE_ALIAS) {
+    hyperValue_t tempValue = frame->frameVariableList.valueArray[index];
+    if (tempValue.type == HYPER_VALUE_TYPE_ALIAS) {
         return tempValue.alias;
     } else {
+        alias_t tempAlias;
+        tempAlias.container = frame;
+        tempAlias.index = index;
         return tempAlias;
     }
 }

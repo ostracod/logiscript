@@ -22,7 +22,7 @@ builtInFunction_t builtInFunctionSet[] = {
     {{FUNCTION_TYPE_BUILT_IN, 1}, (int8_t *)"PROMPT", BUILT_IN_FUNCTION_PROMPT}
 };
 
-valueList_t emptyArgumentList = {NULL, 0};
+hyperValueList_t emptyArgumentList = {NULL, 0};
 
 builtInFunction_t *findBuiltInFunctionByName(int8_t *name) {
     int32_t tempLength = sizeof(builtInFunctionSet) / sizeof(*builtInFunctionSet);
@@ -35,7 +35,7 @@ builtInFunction_t *findBuiltInFunctionByName(int8_t *name) {
     return NULL;
 }
 
-void checkInvocationArgumentList(baseFunction_t *function, valueList_t **argumentList) {
+void checkInvocationArgumentList(baseFunction_t *function, hyperValueList_t **argumentList) {
     if (*argumentList == NULL) {
         *argumentList = &emptyArgumentList;
     }
@@ -53,21 +53,25 @@ void checkInvocationArgumentList(baseFunction_t *function, valueList_t **argumen
     }
 }
 
-value_t getArgument(valueList_t *argumentList, int32_t index) {
+hyperValue_t getArgument(hyperValueList_t *argumentList, int32_t index) {
     if (index < argumentList->length) {
         return argumentList->valueArray[index];
     }
-    value_t tempValue;
-    tempValue.type = VALUE_TYPE_VOID;
+    hyperValue_t tempValue;
+    tempValue.type = HYPER_VALUE_TYPE_VALUE;
+    tempValue.value.type = VALUE_TYPE_VOID;
     return tempValue;
 }
 
-value_t getResolvedArgument(valueList_t *argumentList, int32_t index) {
-    value_t tempValue = getArgument(argumentList, index);
+value_t getResolvedArgument(hyperValueList_t *argumentList, int32_t index) {
+    hyperValue_t tempValue = getArgument(argumentList, index);
     return resolveAliasValue(tempValue);
 }
 
-void invokeBuiltInFunction(builtInFunction_t *builtInFunction, valueList_t *argumentList) {
+void invokeBuiltInFunction(
+    builtInFunction_t *builtInFunction,
+    hyperValueList_t *argumentList
+) {
     checkInvocationArgumentList(&(builtInFunction->base), &argumentList);
     if (hasThrownError) {
         return;
@@ -113,7 +117,7 @@ void invokeBuiltInFunction(builtInFunction_t *builtInFunction, valueList_t *argu
         }
         case BUILT_IN_FUNCTION_CATCH:
         {
-            value_t tempDestination = getArgument(argumentList, 0);
+            hyperValue_t tempDestination = getArgument(argumentList, 0);
             value_t tempChannel = getResolvedArgument(argumentList, 1);
             if (tempChannel.type != VALUE_TYPE_NUMBER) {
                 THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Channel must be a number.");
@@ -180,19 +184,20 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
     alias_t *aliasList = functionHandle->aliasList;
     scope_t *tempScope = &(customFunction->scope);
     int32_t tempLength = (int32_t)(tempScope->variableList.length);
-    value_t *tempValueArray = malloc(sizeof(value_t) * tempLength);
+    hyperValue_t *tempValueArray = malloc(sizeof(hyperValue_t) * tempLength);
     int32_t scopeIndex = 0;
     int32_t aliasIndex = 0;
     while (scopeIndex < tempLength) {
         scopeVariable_t *scopeVariable;
         getVectorElement(&scopeVariable, &(tempScope->variableList), scopeIndex);
-        value_t tempValue;
+        hyperValue_t tempValue;
         if (scopeVariable->parentScopeIndex >= 0) {
-            tempValue.type = VALUE_TYPE_ALIAS;
+            tempValue.type = HYPER_VALUE_TYPE_ALIAS;
             tempValue.alias = aliasList[aliasIndex];
             aliasIndex += 1;
         } else {
-            tempValue.type = VALUE_TYPE_VOID;
+            tempValue.type = HYPER_VALUE_TYPE_VALUE;
+            tempValue.value.type = VALUE_TYPE_VOID;
         }
         tempValueArray[scopeIndex] = tempValue;
         scopeIndex += 1;
@@ -203,7 +208,10 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
     return output;
 }
 
-heapValue_t *invokeFunctionHandle(heapValue_t *functionHandle, valueList_t *argumentList) {
+heapValue_t *invokeFunctionHandle(
+    heapValue_t *functionHandle,
+    hyperValueList_t *argumentList
+) {
     customFunctionHandle_t *tempHandle = functionHandle->customFunctionHandle;
     customFunction_t *customFunction = tempHandle->function;
     checkInvocationArgumentList(&(customFunction->base), &argumentList);
@@ -226,7 +234,7 @@ heapValue_t *invokeFunctionHandle(heapValue_t *functionHandle, valueList_t *argu
     return tempFrame;
 }
 
-void invokeFunction(value_t functionValue, valueList_t *argumentList) {
+void invokeFunction(value_t functionValue, hyperValueList_t *argumentList) {
     if (functionValue.type == VALUE_TYPE_BUILT_IN_FUNCTION) {
         invokeBuiltInFunction(functionValue.builtInFunction, argumentList);
         return;

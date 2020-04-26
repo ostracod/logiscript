@@ -46,8 +46,11 @@ typedef struct customFunctionHandle {
 
 builtInFunction_t *findBuiltInFunctionByName(int8_t *name);
 heapValue_t *createFunctionHandle(heapValue_t *frame, customFunction_t *customFunction);
-heapValue_t *invokeFunctionHandle(heapValue_t *functionHandle, valueList_t *argumentList);
-void invokeFunction(value_t functionValue, valueList_t *argumentList);
+heapValue_t *invokeFunctionHandle(
+    heapValue_t *functionHandle,
+    hyperValueList_t *argumentList
+);
+void invokeFunction(value_t functionValue, hyperValueList_t *argumentList);
 
 // FUNCTION_HEADER_FILE
 #endif
