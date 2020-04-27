@@ -19,57 +19,79 @@ heapValue_t *createHeapValue(int8_t type) {
     }
     output->lockDepth = 0;
     output->referenceCount = 0;
-    output->aliasCount = 0;
     firstHeapValue = output;
     return output;
 }
 
+void removeHeapValueReferenceHelper(heapValue_t *heapValue, int8_t shouldRecur);
 void removeValueReferenceHelper(value_t *value, int8_t shouldRecur);
+void removeHyperValueReferenceHelper(hyperValue_t *hyperValue, int8_t shouldRecur);
 
-void deleteHeapValue(heapValue_t *value, int8_t shouldRecur) {
-    if (value->previous == NULL) {
-        firstHeapValue = value->next;
-    } else {
-        value->previous->next = value->next;
-    }
-    if (value->next != NULL) {
-        value->next->previous = value->previous;
-    }
-    switch (value->type) {
-        case VALUE_TYPE_STRING:
-        {
-            vector_t *tempVector = &(value->vector);
-            cleanUpVector(tempVector);
-            break;
-        }
+void removeNestedHeapValueReferences(heapValue_t *heapValue, int8_t shouldRecur) {
+    switch (heapValue->type) {
         case VALUE_TYPE_LIST:
         {
-            vector_t *tempVector = &(value->vector);
+            vector_t *tempVector = &(heapValue->vector);
             for (int64_t index = 0; index < tempVector->length; index++) {
                 value_t *tempValue = findVectorElement(tempVector, index);
                 removeValueReferenceHelper(tempValue, shouldRecur);
             }
-            cleanUpVector(tempVector);
             break;
         }
         case VALUE_TYPE_FRAME:
         {
-            hyperValueList_t *tempValueList = &(value->frameVariableList);
+            hyperValueList_t *tempValueList = &(heapValue->frameVariableList);
             for (int32_t index = 0; index < tempValueList->length; index++) {
-                // TODO: Finish implementing.
-                
+                hyperValue_t *tempValue = tempValueList->valueArray + index;
+                removeHyperValueReferenceHelper(tempValue, shouldRecur);
             }
+            break;
+        }
+        case VALUE_TYPE_CUSTOM_FUNCTION:
+        {
+            customFunctionHandle_t *tempHandle = heapValue->customFunctionHandle;
+            int32_t tempLength = tempHandle->function->scope.aliasVariableAmount;
+            for (int32_t index = 0; index < tempLength; index++) {
+                alias_t *tempAlias = tempHandle->aliasList + index;
+                removeHeapValueReferenceHelper(tempAlias->container, shouldRecur);
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+
+void deleteHeapValue(heapValue_t *heapValue, int8_t shouldRecur) {
+    if (heapValue->previous == NULL) {
+        firstHeapValue = heapValue->next;
+    } else {
+        heapValue->previous->next = heapValue->next;
+    }
+    if (heapValue->next != NULL) {
+        heapValue->next->previous = heapValue->previous;
+    }
+    if (shouldRecur) {
+        removeNestedHeapValueReferences(heapValue, shouldRecur);
+    }
+    switch (heapValue->type) {
+        case VALUE_TYPE_STRING:
+        case VALUE_TYPE_LIST:
+        {
+            cleanUpVector(&(heapValue->vector));
+            break;
+        }
+        case VALUE_TYPE_FRAME:
+        {
+            hyperValueList_t *tempValueList = &(heapValue->frameVariableList);
             free(tempValueList->valueArray);
             break;
         }
         case VALUE_TYPE_CUSTOM_FUNCTION:
         {
-            customFunctionHandle_t *tempHandle = value->customFunctionHandle;
-            int32_t tempLength = tempHandle->function->scope.aliasVariableAmount;
-            for (int32_t index = 0; index < tempLength; index++) {
-                // TODO: Finish implementing.
-                
-            }
+            customFunctionHandle_t *tempHandle = heapValue->customFunctionHandle;
             free(tempHandle->aliasList);
             free(tempHandle);
             break;
@@ -79,10 +101,9 @@ void deleteHeapValue(heapValue_t *value, int8_t shouldRecur) {
             break;
         }
     }
-    free(value);
+    free(heapValue);
 }
 
-// TODO: Decide whether alias values should be resolved.
 int8_t valueIsInHeap(value_t *value) {
     int8_t tempType = value->type;
     return (tempType == VALUE_TYPE_STRING || tempType == VALUE_TYPE_LIST
@@ -90,48 +111,101 @@ int8_t valueIsInHeap(value_t *value) {
 }
 
 void deleteHeapValueIfUnreferenced(heapValue_t *value) {
-    // TODO: Update this to work with aliasCount.
     if (value->referenceCount <= 0 && value->lockDepth <= 0) {
         deleteHeapValue(value, true);
     }
+}
+
+void lockHeapValue(heapValue_t *heapValue) {
+    heapValue->lockDepth += 1;
 }
 
 void lockValue(value_t *value) {
     if (!valueIsInHeap(value)) {
         return;
     }
-    value->heapValue->lockDepth += 1;
+    lockHeapValue(value->heapValue);
+}
+
+void lockHyperValue(hyperValue_t *hyperValue) {
+    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
+        lockHeapValue(hyperValue->alias.container);
+    } else {
+        lockValue(&(hyperValue->value));
+    }
+}
+
+void unlockHeapValue(heapValue_t *heapValue) {
+    heapValue->lockDepth -= 1;
+    deleteHeapValueIfUnreferenced(heapValue);
 }
 
 void unlockValue(value_t *value) {
     if (!valueIsInHeap(value)) {
         return;
     }
-    heapValue_t *tempHeapValue = value->heapValue;
-    tempHeapValue->lockDepth -= 1;
-    deleteHeapValueIfUnreferenced(tempHeapValue);
+    unlockHeapValue(value->heapValue);
+}
+
+void unlockHyperValue(hyperValue_t *hyperValue) {
+    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
+        unlockHeapValue(hyperValue->alias.container);
+    } else {
+        unlockValue(&(hyperValue->value));
+    }
+}
+
+void addHeapValueReference(heapValue_t *heapValue) {
+    heapValue->referenceCount += 1;
 }
 
 void addValueReference(value_t *value) {
     if (!valueIsInHeap(value)) {
         return;
     }
-    value->heapValue->referenceCount += 1;
+    addHeapValueReference(value->heapValue);
+}
+
+void addHyperValueReference(hyperValue_t *hyperValue) {
+    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
+        addHeapValueReference(hyperValue->alias.container);
+    } else {
+        addValueReference(&(hyperValue->value));
+    }
+}
+
+void removeHeapValueReferenceHelper(heapValue_t *heapValue, int8_t shouldRecur) {
+    heapValue->referenceCount -= 1;
+    if (shouldRecur) {
+        deleteHeapValueIfUnreferenced(heapValue);
+    }
 }
 
 void removeValueReferenceHelper(value_t *value, int8_t shouldRecur) {
     if (!valueIsInHeap(value)) {
         return;
     }
-    heapValue_t *tempHeapValue = value->heapValue;
-    tempHeapValue->referenceCount -= 1;
-    if (shouldRecur) {
-        deleteHeapValueIfUnreferenced(tempHeapValue);
+    removeHeapValueReferenceHelper(value->heapValue, shouldRecur);
+}
+
+void removeHyperValueReferenceHelper(hyperValue_t *hyperValue, int8_t shouldRecur) {
+    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
+        removeHeapValueReferenceHelper(hyperValue->alias.container, shouldRecur);
+    } else {
+        removeValueReferenceHelper(&(hyperValue->value), shouldRecur);
     }
+}
+
+void removeHeapValueReference(heapValue_t *heapValue) {
+    removeHeapValueReferenceHelper(heapValue, true);
 }
 
 void removeValueReference(value_t *value) {
     removeValueReferenceHelper(value, true);
+}
+
+void removeHyperValueReference(hyperValue_t *hyperValue) {
+    removeHyperValueReferenceHelper(hyperValue, true);
 }
 
 void swapValueReference(value_t *destination, value_t *source) {

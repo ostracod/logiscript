@@ -15,6 +15,10 @@
 #define HYPER_VALUE_TYPE_VALUE 1
 #define HYPER_VALUE_TYPE_ALIAS 2
 
+#define HEAP_VALUE_MARK_NONE 1
+#define HEAP_VALUE_MARK_WEAK 2
+#define HEAP_VALUE_MARK_STRONG 3
+
 typedef struct heapValue heapValue_t;
 typedef struct builtInFunction builtInFunction_t;
 
@@ -55,10 +59,9 @@ typedef struct customFunctionHandle customFunctionHandle_t;
 
 typedef struct heapValue {
     int8_t type;
-    int8_t isMarked;
+    int8_t mark;
     int32_t lockDepth;
     int64_t referenceCount;
-    int64_t aliasCount;
     heapValue_t *previous;
     heapValue_t *next;
     // For strings, the union is a vector of int8_t.
