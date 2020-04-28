@@ -13,9 +13,20 @@
 #include "evaluate.h"
 #include "error.h"
 
+void cleanUpScript(script_t *script) {
+    if (script->path != NULL) {
+        free(script->path);
+    }
+    if (script->body != NULL) {
+        free(script->body);
+    }
+    free(script);
+}
+
 script_t *importScript(int8_t *path) {
     hasThrownError = false;
     script_t *output = malloc(sizeof(script_t));
+    output->body = NULL;
     output->path = mallocRealpath(path);
     if (output->path == NULL) {
         THROW_BUILT_IN_ERROR(
@@ -23,16 +34,17 @@ script_t *importScript(int8_t *path) {
             "Could not read script at %s.",
             path
         );
+        cleanUpScript(output);
         return NULL;
     }
     output->body = readEntireFile(&(output->bodyLength), output->path);
     if (output->body == NULL) {
-        free(output);
         THROW_BUILT_IN_ERROR(
             STATE_ERROR_CONSTANT,
             "Could not read script at %s.",
             output->path
         );
+        cleanUpScript(output);
         return NULL;
     }
     
@@ -57,10 +69,12 @@ script_t *importScript(int8_t *path) {
     parseStatementList(&(topLevelFunction->statementList), &parser, -1);
     if (hasThrownError) {
         addBodyPosToStackTrace(parser.bodyPos);
+        cleanUpScript(output);
         return NULL;
     }
     resolveIdentifiersInFunction(topLevelFunction);
     if (hasThrownError) {
+        cleanUpScript(output);
         return NULL;
     }
     evaluateScript(output);

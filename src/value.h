@@ -76,6 +76,18 @@ typedef struct heapValue {
 } heapValue_t;
 
 heapValue_t *createHeapValue(int8_t type);
+void deleteValueIfUnreferenced(value_t *value);
+void lockHeapValue(heapValue_t *heapValue);
+void lockValue(value_t *value);
+void lockHyperValue(hyperValue_t *hyperValue);
+void unlockHeapValue(heapValue_t *heapValue);
+void unlockValue(value_t *value);
+void unlockHyperValue(hyperValue_t *hyperValue);
+void unlockFunctionInvocationValues(value_t *function, hyperValueList_t *hyperValueList);
+void unlockValuesInVector(vector_t *vector);
+void addHeapValueReference(heapValue_t *heapValue);
+void addValueReferencesInVector(vector_t *vector);
+void swapHyperValueReference(hyperValue_t *destination, hyperValue_t *source);
 value_t createValueFromHeapValue(heapValue_t *heapValue);
 value_t copyValue(value_t value);
 value_t convertTextToStringValue(int8_t *text);
@@ -84,6 +96,7 @@ value_t readValueFromAlias(alias_t alias);
 void writeValueToAlias(alias_t alias, value_t value);
 value_t resolveAliasValue(hyperValue_t hyperValue);
 void writeValueToAliasValue(hyperValue_t aliasValue, value_t value);
+void printAllHeapValues();
 
 #include "function.h"
 #include "variable.h"

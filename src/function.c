@@ -129,6 +129,7 @@ void invokeBuiltInFunction(
                 if ((int32_t)(tempChannel.numberValue) == thrownErrorChannel) {
                     hasThrownError = false;
                     writeValueToAliasValue(tempDestination, thrownErrorValue);
+                    unlockValue(&thrownErrorValue);
                 }
             } else {
                 value_t tempValue;
@@ -142,6 +143,7 @@ void invokeBuiltInFunction(
             value_t tempValue = getResolvedArgument(argumentList, 0);
             value_t stringValue = convertValueToString(tempValue, false);
             printf("%s\n", stringValue.heapValue->vector.data);
+            deleteValueIfUnreferenced(&stringValue);
             break;
         }
         // TODO: Implement more built-in functions.
@@ -168,10 +170,12 @@ heapValue_t *createFunctionHandle(heapValue_t *frame, customFunction_t *customFu
         if (tempVariable->parentScopeIndex < 0) {
             continue;
         }
-        tempHandle->aliasList[aliasIndex] = getAliasToFrameVariable(
+        alias_t tempAlias = getAliasToFrameVariable(
             frame,
             tempVariable->parentScopeIndex
         );
+        tempHandle->aliasList[aliasIndex] = tempAlias;
+        addHeapValueReference(tempAlias.container);
         aliasIndex += 1;
     }
     heapValue_t *output = createHeapValue(VALUE_TYPE_CUSTOM_FUNCTION);
@@ -185,21 +189,24 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
     scope_t *tempScope = &(customFunction->scope);
     int32_t tempLength = (int32_t)(tempScope->variableList.length);
     hyperValue_t *tempValueArray = malloc(sizeof(hyperValue_t) * tempLength);
+    for (int32_t index = 0; index < tempLength; index++) {
+        hyperValue_t tempValue;
+        tempValue.type = HYPER_VALUE_TYPE_VALUE;
+        tempValue.value.type = VALUE_TYPE_VOID;
+        tempValueArray[index] = tempValue;
+    }
     int32_t scopeIndex = 0;
     int32_t aliasIndex = 0;
     while (scopeIndex < tempLength) {
         scopeVariable_t *scopeVariable;
         getVectorElement(&scopeVariable, &(tempScope->variableList), scopeIndex);
-        hyperValue_t tempValue;
         if (scopeVariable->parentScopeIndex >= 0) {
+            hyperValue_t tempValue;
             tempValue.type = HYPER_VALUE_TYPE_ALIAS;
             tempValue.alias = aliasList[aliasIndex];
+            swapHyperValueReference(tempValueArray + scopeIndex, &tempValue);
             aliasIndex += 1;
-        } else {
-            tempValue.type = HYPER_VALUE_TYPE_VALUE;
-            tempValue.value.type = VALUE_TYPE_VOID;
         }
-        tempValueArray[scopeIndex] = tempValue;
         scopeIndex += 1;
     }
     heapValue_t *output = createHeapValue(VALUE_TYPE_FRAME);
@@ -208,6 +215,7 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
     return output;
 }
 
+// Output will be locked.
 heapValue_t *invokeFunctionHandle(
     heapValue_t *functionHandle,
     hyperValueList_t *argumentList
@@ -219,8 +227,12 @@ heapValue_t *invokeFunctionHandle(
         return NULL;
     }
     heapValue_t *tempFrame = functionHandleCreateFrame(tempHandle);
+    lockHeapValue(tempFrame);
     for (int32_t index = 0; index < argumentList->length; index++) {
-        tempFrame->frameVariableList.valueArray[index] = argumentList->valueArray[index];
+        swapHyperValueReference(
+            tempFrame->frameVariableList.valueArray + index,
+            argumentList->valueArray + index
+        );
     }
     for (int64_t index = 0; index < customFunction->statementList.length; index++) {
         baseStatement_t *tempStatement;
@@ -231,6 +243,7 @@ heapValue_t *invokeFunctionHandle(
             break;
         }
     }
+    printAllHeapValues();
     return tempFrame;
 }
 
@@ -240,7 +253,8 @@ void invokeFunction(value_t functionValue, hyperValueList_t *argumentList) {
         return;
     }
     if (functionValue.type == VALUE_TYPE_CUSTOM_FUNCTION) {
-        invokeFunctionHandle(functionValue.heapValue, argumentList);
+        heapValue_t *tempFrame = invokeFunctionHandle(functionValue.heapValue, argumentList);
+        unlockHeapValue(tempFrame);
         return;
     }
     THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected function handle.");

@@ -92,7 +92,9 @@ void deleteHeapValue(heapValue_t *heapValue, int8_t shouldRecur) {
         case VALUE_TYPE_CUSTOM_FUNCTION:
         {
             customFunctionHandle_t *tempHandle = heapValue->customFunctionHandle;
-            free(tempHandle->aliasList);
+            if (tempHandle->aliasList != NULL) {
+                free(tempHandle->aliasList);
+            }
             free(tempHandle);
             break;
         }
@@ -110,10 +112,17 @@ int8_t valueIsInHeap(value_t *value) {
             || tempType == VALUE_TYPE_FRAME || tempType == VALUE_TYPE_CUSTOM_FUNCTION);
 }
 
-void deleteHeapValueIfUnreferenced(heapValue_t *value) {
-    if (value->referenceCount <= 0 && value->lockDepth <= 0) {
-        deleteHeapValue(value, true);
+void deleteHeapValueIfUnreferenced(heapValue_t *heapValue) {
+    if (heapValue->referenceCount <= 0 && heapValue->lockDepth <= 0) {
+        deleteHeapValue(heapValue, true);
     }
+}
+
+void deleteValueIfUnreferenced(value_t *value) {
+    if (!valueIsInHeap(value)) {
+        return;
+    }
+    deleteHeapValueIfUnreferenced(value->heapValue);
 }
 
 void lockHeapValue(heapValue_t *heapValue) {
@@ -155,6 +164,20 @@ void unlockHyperValue(hyperValue_t *hyperValue) {
     }
 }
 
+void unlockFunctionInvocationValues(value_t *function, hyperValueList_t *hyperValueList) {
+    unlockValue(function);
+    for (int32_t index = 0; index < hyperValueList->length; index++) {
+        unlockHyperValue(hyperValueList->valueArray + index);
+    }
+}
+
+void unlockValuesInVector(vector_t *vector) {
+    for (int64_t index = 0; index < vector->length; index++) {
+        value_t *tempValue = findVectorElement(vector, index);
+        unlockValue(tempValue);
+    }
+}
+
 void addHeapValueReference(heapValue_t *heapValue) {
     heapValue->referenceCount += 1;
 }
@@ -171,6 +194,13 @@ void addHyperValueReference(hyperValue_t *hyperValue) {
         addHeapValueReference(hyperValue->alias.container);
     } else {
         addValueReference(&(hyperValue->value));
+    }
+}
+
+void addValueReferencesInVector(vector_t *vector) {
+    for (int64_t index = 0; index < vector->length; index++) {
+        value_t *tempValue = findVectorElement(vector, index);
+        addValueReference(tempValue);
     }
 }
 
@@ -214,6 +244,12 @@ void swapValueReference(value_t *destination, value_t *source) {
     *destination = *source;
 }
 
+void swapHyperValueReference(hyperValue_t *destination, hyperValue_t *source) {
+    addHyperValueReference(source);
+    removeHyperValueReference(destination);
+    *destination = *source;
+}
+
 value_t createValueFromHeapValue(heapValue_t *heapValue) {
     value_t output;
     output.type = heapValue->type;
@@ -222,7 +258,17 @@ value_t createValueFromHeapValue(heapValue_t *heapValue) {
 }
 
 value_t copyValue(value_t value) {
-    // TODO: Implement string and list copy.
+    if (value.type == VALUE_TYPE_STRING) {
+        heapValue_t *tempHeapValue = createHeapValue(VALUE_TYPE_STRING);
+        copyVector(&(tempHeapValue->vector), &(value.heapValue->vector));
+        return createValueFromHeapValue(tempHeapValue);
+    }
+    if (value.type == VALUE_TYPE_LIST) {
+        heapValue_t *tempHeapValue = createHeapValue(VALUE_TYPE_LIST);
+        copyVector(&(tempHeapValue->vector), &(value.heapValue->vector));
+        addValueReferencesInVector(&(tempHeapValue->vector));
+        return createValueFromHeapValue(tempHeapValue);
+    }
     return value;
 }
 
@@ -340,7 +386,7 @@ void writeValueToAlias(alias_t alias, value_t value) {
         hyperValue_t *tempValue = heapValue->frameVariableList.valueArray + index;
         // Note: tempValue cannot have type HYPER_VALUE_TYPE_ALIAS,
         // because this is an invariant of alias_t.
-        tempValue->value = value;
+        swapValueReference(&(tempValue->value), &value);
     }
     // TODO: Write to more types of heap values.
     
@@ -359,6 +405,20 @@ void writeValueToAliasValue(hyperValue_t aliasValue, value_t value) {
         return;
     }
     writeValueToAlias(aliasValue.alias, value);
+}
+
+void printAllHeapValues() {
+    printf("    HEAP VALUES:\n");
+    heapValue_t *tempHeapValue = firstHeapValue;
+    while (tempHeapValue != NULL) {
+        printf(
+            "    Type = %d; Lock depth = %d; Reference count = %lld\n",
+            tempHeapValue->type,
+            tempHeapValue->lockDepth,
+            tempHeapValue->referenceCount
+        );
+        tempHeapValue = tempHeapValue->next;
+    }
 }
 
 

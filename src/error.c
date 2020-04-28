@@ -50,6 +50,7 @@ void throwError(int32_t channel, value_t value) {
     }
     thrownErrorChannel = channel;
     thrownErrorValue = value;
+    lockValue(&value);
     if (!tempIsRethrow) {
         traceBodyPosIndex = 0;
     }

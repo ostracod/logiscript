@@ -12,6 +12,7 @@
 
 value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expression);
 
+// Output will be locked.
 hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
     hyperValue_t output;
     output.type = HYPER_VALUE_TYPE_VALUE;
@@ -40,12 +41,16 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                     tempElementExpression
                 );
                 if (hasThrownError) {
+                    unlockValuesInVector(&tempValueList);
+                    cleanUpVector(&tempValueList);
                     return output;
                 }
                 pushVectorElement(&tempValueList, &tempValue);
             }
             heapValue_t *tempHeapValue = createHeapValue(VALUE_TYPE_LIST);
             tempHeapValue->vector = tempValueList;
+            addValueReferencesInVector(&tempValueList);
+            unlockValuesInVector(&tempValueList);
             output.value = createValueFromHeapValue(tempHeapValue);
             break;
         }
@@ -69,6 +74,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                 return output;
             }
             output.value = calculateUnaryOperator(tempOperator, tempOperand);
+            unlockValue(&tempOperand);
             break;
         }
         case EXPRESSION_TYPE_BINARY:
@@ -87,9 +93,12 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                 binaryExpression->operand2
             );
             if (hasThrownError) {
+                unlockValue(&tempOperand1);
                 return output;
             }
             output.value = calculateBinaryOperator(tempOperator, tempOperand1, tempOperand2);
+            unlockValue(&tempOperand1);
+            unlockValue(&tempOperand2);
             break;
         }
         case EXPRESSION_TYPE_FUNCTION:
@@ -108,6 +117,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
             break;
         }
     }
+    lockHyperValue(&output);
     return output;
 }
 
@@ -118,33 +128,44 @@ value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expre
         output.type = VALUE_TYPE_VOID;
         return output;
     }
-    return resolveAliasValue(tempHyperValue);
+    value_t output = resolveAliasValue(tempHyperValue);
+    lockValue(&output);
+    unlockHyperValue(&tempHyperValue);
+    return output;
 }
 
 void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
     if (statement->type == STATEMENT_TYPE_INVOCATION) {
         invocationStatement_t *invocationStatement = (invocationStatement_t *)statement;
+        int32_t tempLength = (int32_t)(invocationStatement->argumentList.length);
+        hyperValue_t tempValueArray[tempLength];
+        hyperValueList_t argumentList;
+        argumentList.valueArray = tempValueArray;
+        argumentList.length = tempLength;
+        for (int32_t index = 0; index < tempLength; index++) {
+            hyperValue_t *tempValue = tempValueArray + index;
+            tempValue->type = HYPER_VALUE_TYPE_VALUE;
+            tempValue->value.type = VALUE_TYPE_VOID;
+        }
         value_t functionValue = evaluateAndResolveExpression(
             frame,
             invocationStatement->function
         );
         if (hasThrownError) {
+            unlockFunctionInvocationValues(&functionValue, &argumentList);
             return;
         }
-        int32_t tempLength = (int32_t)(invocationStatement->argumentList.length);
-        hyperValue_t tempValueArray[tempLength];
         for (int32_t index = 0; index < tempLength; index++) {
             baseExpression_t *tempExpression;
             getVectorElement(&tempExpression, &(invocationStatement->argumentList), index);
             tempValueArray[index] = evaluateExpression(frame, tempExpression);
             if (hasThrownError) {
+                unlockFunctionInvocationValues(&functionValue, &argumentList);
                 return;
             }
         }
-        hyperValueList_t argumentList;
-        argumentList.valueArray = tempValueArray;
-        argumentList.length = tempLength;
         invokeFunction(functionValue, &argumentList);
+        unlockFunctionInvocationValues(&functionValue, &argumentList);
     }
     // TODO: Evaluate other types of statements.
     

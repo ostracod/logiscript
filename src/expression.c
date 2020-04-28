@@ -17,6 +17,7 @@ baseExpression_t *createConstantExpression(value_t value) {
     constantExpression_t *output = malloc(sizeof(constantExpression_t));
     output->base.type = EXPRESSION_TYPE_CONSTANT;
     output->value = value;
+    lockValue(&value);
     return (baseExpression_t *)output;
 }
 
