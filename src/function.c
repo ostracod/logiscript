@@ -243,7 +243,6 @@ heapValue_t *invokeFunctionHandle(
             break;
         }
     }
-    printAllHeapValues();
     return tempFrame;
 }
 

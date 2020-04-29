@@ -250,6 +250,114 @@ void swapHyperValueReference(hyperValue_t *destination, hyperValue_t *source) {
     *destination = *source;
 }
 
+void markValue(value_t *value);
+void markAlias(alias_t *alias);
+void markHyperValue(hyperValue_t *hyperValue);
+
+void markHeapValue(heapValue_t *heapValue, int8_t mark) {
+    if (mark == HEAP_VALUE_MARK_WEAK) {
+        if (heapValue->mark == HEAP_VALUE_MARK_NONE) {
+            heapValue->mark = HEAP_VALUE_MARK_WEAK;
+        }
+        return;
+    }
+    if (mark == HEAP_VALUE_MARK_STRONG) {
+        if (heapValue->mark == HEAP_VALUE_MARK_STRONG) {
+            return;
+        }
+        heapValue->mark = HEAP_VALUE_MARK_STRONG;
+    }
+    switch (heapValue->type) {
+        case VALUE_TYPE_LIST:
+        {
+            vector_t *tempVector = &(heapValue->vector);
+            for (int64_t index = 0; index < tempVector->length; index++) {
+                value_t *tempValue = findVectorElement(tempVector, index);
+                markValue(tempValue);
+            }
+            break;
+        }
+        case VALUE_TYPE_FRAME:
+        {
+            hyperValueList_t *tempValueList = &(heapValue->frameVariableList);
+            for (int32_t index = 0; index < tempValueList->length; index++) {
+                hyperValue_t *tempValue = tempValueList->valueArray + index;
+                markHyperValue(tempValue);
+            }
+            break;
+        }
+        case VALUE_TYPE_CUSTOM_FUNCTION:
+        {
+            customFunctionHandle_t *tempHandle = heapValue->customFunctionHandle;
+            int32_t tempLength = tempHandle->function->scope.aliasVariableAmount;
+            for (int32_t index = 0; index < tempLength; index++) {
+                alias_t *tempAlias = tempHandle->aliasList + index;
+                markAlias(tempAlias);
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+
+void markValue(value_t *value) {
+    if (!valueIsInHeap(value)) {
+        return;
+    }
+    markHeapValue(value->heapValue, HEAP_VALUE_MARK_STRONG);
+}
+
+void markAlias(alias_t *alias) {
+    markHeapValue(alias->container, HEAP_VALUE_MARK_WEAK);
+    value_t tempValue = readValueFromAlias(*alias);
+    markValue(&tempValue);
+}
+
+void markHyperValue(hyperValue_t *hyperValue) {
+    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
+        markAlias(&(hyperValue->alias));
+    } else {
+        markValue(&(hyperValue->value));
+    }
+}
+
+void markAndSweepHeapValues() {
+    // Unmark all values.
+    heapValue_t *tempHeapValue = firstHeapValue;
+    while (tempHeapValue != NULL) {
+        tempHeapValue->mark = HEAP_VALUE_MARK_NONE;
+        tempHeapValue = tempHeapValue->next;
+    }
+    // Mark all locked values.
+    tempHeapValue = firstHeapValue;
+    while (tempHeapValue != NULL) {
+        if (tempHeapValue->lockDepth > 0) {
+            markHeapValue(tempHeapValue, HEAP_VALUE_MARK_STRONG);
+        }
+        tempHeapValue = tempHeapValue->next;
+    }
+    // Remove references of all unmarked values.
+    tempHeapValue = firstHeapValue;
+    while (tempHeapValue != NULL) {
+        if (tempHeapValue->mark == HEAP_VALUE_MARK_NONE) {
+            removeNestedHeapValueReferences(tempHeapValue, false);
+        }
+        tempHeapValue = tempHeapValue->next;
+    }
+    // Delete all unmarked values.
+    tempHeapValue = firstHeapValue;
+    while (tempHeapValue != NULL) {
+        heapValue_t *nextHeapValue = tempHeapValue->next;
+        if (tempHeapValue->mark == HEAP_VALUE_MARK_NONE) {
+            deleteHeapValue(tempHeapValue, false);
+        }
+        tempHeapValue = nextHeapValue;
+    }
+}
+
 value_t createValueFromHeapValue(heapValue_t *heapValue) {
     value_t output;
     output.type = heapValue->type;

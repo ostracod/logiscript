@@ -10,6 +10,8 @@
 #include "value.h"
 #include "error.h"
 
+int32_t markAndSweepDelay = 0;
+
 value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expression);
 
 // Output will be locked.
@@ -169,6 +171,11 @@ void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
     }
     // TODO: Evaluate other types of statements.
     
+    markAndSweepDelay += 1;
+    if (markAndSweepDelay > 10000) {
+        markAndSweepHeapValues();
+        markAndSweepDelay = 0;
+    }
 }
 
 void evaluateScript(script_t *script) {

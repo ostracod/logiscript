@@ -88,6 +88,7 @@ void unlockValuesInVector(vector_t *vector);
 void addHeapValueReference(heapValue_t *heapValue);
 void addValueReferencesInVector(vector_t *vector);
 void swapHyperValueReference(hyperValue_t *destination, hyperValue_t *source);
+void markAndSweepHeapValues();
 value_t createValueFromHeapValue(heapValue_t *heapValue);
 value_t copyValue(value_t value);
 value_t convertTextToStringValue(int8_t *text);
