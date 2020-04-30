@@ -63,4 +63,15 @@ baseExpression_t *createCustomFunctionExpression(customFunction_t *customFunctio
     return (baseExpression_t *)output;
 }
 
+baseExpression_t *createIndexExpression(
+    baseExpression_t *sequenceExpression,
+    baseExpression_t *indexExpression
+) {
+    indexExpression_t *output = malloc(sizeof(indexExpression_t));
+    output->base.type = EXPRESSION_TYPE_INDEX;
+    output->sequence = sequenceExpression;
+    output->index = indexExpression;
+    return (baseExpression_t *)output;
+}
+
 

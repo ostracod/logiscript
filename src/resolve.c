@@ -152,6 +152,16 @@ void resolveIdentifiersInExpression(
             );
             break;
         }
+        case EXPRESSION_TYPE_INDEX:
+        {
+            indexExpression_t *indexExpression = (indexExpression_t *)tempExpression;
+            resolveIdentifiersInExpression(scope, &(indexExpression->sequence));
+            if (hasThrownError) {
+                return;
+            }
+            resolveIdentifiersInExpression(scope, &(indexExpression->index));
+            break;
+        }
         // TODO: Resolve identifiers in other expression types.
         
         default:

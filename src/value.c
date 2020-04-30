@@ -453,6 +453,7 @@ value_t convertValueToString(value_t value, int8_t shouldCopy) {
                 vector_t *tempText = &(tempStringValue.heapValue->vector);
                 pushVectorOntoVector(&tempVector, tempText);
                 removeVectorElement(&tempVector, tempVector.length - 1);
+                deleteValueIfUnreferenced(&tempStringValue);
             }
             tempCharacter = ']';
             pushVectorElement(&tempVector, &tempCharacter);
@@ -472,6 +473,8 @@ value_t convertValueToString(value_t value, int8_t shouldCopy) {
 }
 
 value_t readValueFromAlias(alias_t alias) {
+    value_t output;
+    output.type = VALUE_TYPE_VOID;
     heapValue_t *heapValue = alias.container;
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
@@ -480,10 +483,26 @@ value_t readValueFromAlias(alias_t alias) {
         // because this is an invariant of alias_t.
         return tempValue->value;
     }
-    // TODO: Read from more types of heap values.
-    
-    value_t output;
-    output.type = VALUE_TYPE_VOID;
+    if (heapValue->type == VALUE_TYPE_LIST) {
+        if (alias.index < 0 || alias.index >= heapValue->vector.length) {
+            THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Index is out of bounds.");
+            return output;
+        }
+        value_t output;
+        getVectorElement(&output, &(heapValue->vector), alias.index);
+        return output;
+    }
+    if (heapValue->type == VALUE_TYPE_STRING) {
+        if (alias.index < 0 || alias.index >= heapValue->vector.length - 1) {
+            THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Index is out of bounds.");
+            return output;
+        }
+        int8_t tempCharacter;
+        getVectorElement(&tempCharacter, &(heapValue->vector), alias.index);
+        output.type = VALUE_TYPE_NUMBER;
+        output.numberValue = tempCharacter;
+        return output;
+    }
     return output;
 }
 
@@ -496,8 +515,26 @@ void writeValueToAlias(alias_t alias, value_t value) {
         // because this is an invariant of alias_t.
         swapValueReference(&(tempValue->value), &value);
     }
-    // TODO: Write to more types of heap values.
-    
+    if (heapValue->type == VALUE_TYPE_LIST) {
+        if (alias.index < 0 || alias.index >= heapValue->vector.length) {
+            THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Index is out of bounds.");
+            return;
+        }
+        value_t *tempValue = findVectorElement(&(heapValue->vector), alias.index);
+        swapValueReference(tempValue, &value);
+    }
+    if (heapValue->type == VALUE_TYPE_STRING) {
+        if (alias.index < 0 || alias.index >= heapValue->vector.length - 1) {
+            THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Index is out of bounds.");
+            return;
+        }
+        if (value.type != VALUE_TYPE_NUMBER) {
+            THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected number value.");
+            return;
+        }
+        int8_t tempCharacter = (int8_t)(value.numberValue);
+        setVectorElement(&(heapValue->vector), alias.index, &tempCharacter);
+    }
 }
 
 value_t resolveAliasValue(hyperValue_t hyperValue) {

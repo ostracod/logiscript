@@ -71,7 +71,7 @@ typedef struct binaryExpression {
 
 typedef struct indexExpression {
     baseExpression_t base;
-    baseExpression_t *list;
+    baseExpression_t *sequence;
     baseExpression_t *index;
 } indexExpression_t;
 
@@ -92,6 +92,10 @@ baseExpression_t *createBinaryExpression(
     baseExpression_t *operand2
 );
 baseExpression_t *createCustomFunctionExpression(customFunction_t *customFunction);
+baseExpression_t *createIndexExpression(
+    baseExpression_t *sequenceExpression,
+    baseExpression_t *indexExpression
+);
 
 // EXPRESSION_HEADER_FILE
 #endif

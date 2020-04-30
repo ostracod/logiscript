@@ -63,6 +63,8 @@ hyperValue_t getArgument(hyperValueList_t *argumentList, int32_t index) {
     return tempValue;
 }
 
+// Note: This will throw an error if the hyper value
+// contains an alias with a bad index.
 value_t getResolvedArgument(hyperValueList_t *argumentList, int32_t index) {
     hyperValue_t tempValue = getArgument(argumentList, index);
     return resolveAliasValue(tempValue);
@@ -80,18 +82,24 @@ void invokeBuiltInFunction(
         case BUILT_IN_FUNCTION_SET:
         {
             value_t tempValue = getResolvedArgument(argumentList, 1);
+            if (hasThrownError) {
+                return;
+            }
             writeValueToAliasValue(getArgument(argumentList, 0), tempValue);
             break;
         }
         case BUILT_IN_FUNCTION_IF:
         {
             value_t tempCondition = getResolvedArgument(argumentList, 0);
+            value_t tempHandle = getResolvedArgument(argumentList, 1);
+            if (hasThrownError) {
+                return;
+            }
             if (tempCondition.type != VALUE_TYPE_NUMBER) {
                 THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Condition must be a number.");
                 return;
             }
             if (tempCondition.numberValue != 0) {
-                value_t tempHandle = getResolvedArgument(argumentList, 1);
                 invokeFunction(tempHandle, NULL);
             }
             break;
@@ -107,11 +115,14 @@ void invokeBuiltInFunction(
         case BUILT_IN_FUNCTION_THROW:
         {
             value_t tempChannel = getResolvedArgument(argumentList, 0);
+            value_t tempValue = getResolvedArgument(argumentList, 1);
+            if (hasThrownError) {
+                return;
+            }
             if (tempChannel.type != VALUE_TYPE_NUMBER) {
                 THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Channel must be a number.");
                 return;
             }
-            value_t tempValue = getResolvedArgument(argumentList, 1);
             throwError((int32_t)(tempChannel.numberValue), tempValue);
             break;
         }
@@ -119,11 +130,14 @@ void invokeBuiltInFunction(
         {
             hyperValue_t tempDestination = getArgument(argumentList, 0);
             value_t tempChannel = getResolvedArgument(argumentList, 1);
+            value_t tempHandle = getResolvedArgument(argumentList, 2);
+            if (hasThrownError) {
+                return;
+            }
             if (tempChannel.type != VALUE_TYPE_NUMBER) {
                 THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Channel must be a number.");
                 return;
             }
-            value_t tempHandle = getResolvedArgument(argumentList, 2);
             invokeFunction(tempHandle, NULL);
             if (hasThrownError) {
                 if ((int32_t)(tempChannel.numberValue) == thrownErrorChannel) {
@@ -141,6 +155,9 @@ void invokeBuiltInFunction(
         case BUILT_IN_FUNCTION_PRINT:
         {
             value_t tempValue = getResolvedArgument(argumentList, 0);
+            if (hasThrownError) {
+                return;
+            }
             value_t stringValue = convertValueToString(tempValue, false);
             printf("%s\n", stringValue.heapValue->vector.data);
             deleteValueIfUnreferenced(&stringValue);

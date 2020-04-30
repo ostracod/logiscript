@@ -226,6 +226,7 @@ baseExpression_t *parseStringConstantExpression(parser_t *parser) {
             THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected '\"'.");
             return NULL;
         }
+        bodyPos->index += 1;
         if (tempIsEscaped) {
             tempCharacter = escapeCharacter(tempCharacter);
             pushVectorElement(tempText, &tempCharacter);
@@ -239,9 +240,7 @@ baseExpression_t *parseStringConstantExpression(parser_t *parser) {
                 pushVectorElement(tempText, &tempCharacter);
             }
         }
-        bodyPos->index += 1;
     }
-    bodyPos->index += 1;
     int8_t tempCharacter = 0;
     pushVectorElement(tempText, &tempCharacter);
     value_t tempValue = createValueFromHeapValue(tempHeapValue);
@@ -390,6 +389,23 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
     }
     while (true) {
         bodyPosSkipWhitespace(bodyPos);
+        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+        if (tempCharacter == '[') {
+            bodyPos->index += 1;
+            baseExpression_t *tempOperand = parseExpression(parser, 99);
+            if (hasThrownError) {
+                return NULL;
+            }
+            bodyPosSkipWhitespace(bodyPos);
+            int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+            if (tempCharacter != ']') {
+                THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected ']'.");
+                return NULL;
+            }
+            bodyPos->index += 1;
+            output = createIndexExpression(output, tempOperand);
+            continue;
+        }
         tempOperator = bodyPosGetOperator(bodyPos, OPERATOR_ARRANGEMENT_BINARY);
         if (tempOperator != NULL && tempOperator->precedence < precedence) {
             if (tempOperator->number == OPERATOR_NAMESPACE) {

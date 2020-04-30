@@ -12,6 +12,24 @@
 
 int32_t markAndSweepDelay = 0;
 
+hyperValue_t accessSequenceElement(value_t sequenceValue, value_t indexValue) {
+    hyperValue_t output;
+    output.type = HYPER_VALUE_TYPE_VALUE;
+    output.value.type = VALUE_TYPE_VOID;
+    if (sequenceValue.type != VALUE_TYPE_STRING && sequenceValue.type != VALUE_TYPE_LIST) {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected sequence value.");
+        return output;
+    }
+    if (indexValue.type != VALUE_TYPE_NUMBER) {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected number value.");
+        return output;
+    }
+    output.type = HYPER_VALUE_TYPE_ALIAS;
+    output.alias.container = sequenceValue.heapValue;
+    output.alias.index = (int64_t)(indexValue.numberValue);
+    return output;
+}
+
 value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expression);
 
 // Output will be locked.
@@ -110,6 +128,29 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                 ((customFunctionExpression_t *)expression)->customFunction
             );
             output.value = createValueFromHeapValue(tempHandle);
+            break;
+        }
+        case EXPRESSION_TYPE_INDEX:
+        {
+            indexExpression_t *indexExpression = (indexExpression_t *)expression;
+            value_t sequenceValue = evaluateAndResolveExpression(
+                frame,
+                indexExpression->sequence
+            );
+            if (hasThrownError) {
+                return output;
+            }
+            value_t indexValue = evaluateAndResolveExpression(
+                frame,
+                indexExpression->index
+            );
+            if (hasThrownError) {
+                unlockValue(&sequenceValue);
+                return output;
+            }
+            output = accessSequenceElement(sequenceValue, indexValue);
+            unlockValue(&sequenceValue);
+            unlockValue(&indexValue);
             break;
         }
         // TODO: Evaluate other types of expressions.
