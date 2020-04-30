@@ -50,10 +50,10 @@ void removeNestedHeapValueReferences(heapValue_t *heapValue, int8_t shouldRecur)
         case VALUE_TYPE_CUSTOM_FUNCTION:
         {
             customFunctionHandle_t *tempHandle = heapValue->customFunctionHandle;
-            int32_t tempLength = tempHandle->function->scope.aliasVariableAmount;
-            for (int32_t index = 0; index < tempLength; index++) {
-                alias_t *tempAlias = tempHandle->aliasList + index;
-                removeHeapValueReferenceHelper(tempAlias->container, shouldRecur);
+            hyperValueList_t *tempValueList = &(tempHandle->locationList);
+            for (int32_t index = 0; index < tempValueList->length; index++) {
+                hyperValue_t *tempValue = tempValueList->valueArray + index;
+                removeHyperValueReferenceHelper(tempValue, shouldRecur);
             }
             break;
         }
@@ -61,6 +61,12 @@ void removeNestedHeapValueReferences(heapValue_t *heapValue, int8_t shouldRecur)
         {
             break;
         }
+    }
+}
+
+void cleanUpHyperValueList(hyperValueList_t *hyperValueList) {
+    if (hyperValueList->valueArray != NULL) {
+        free(hyperValueList->valueArray);
     }
 }
 
@@ -85,16 +91,13 @@ void deleteHeapValue(heapValue_t *heapValue, int8_t shouldRecur) {
         }
         case VALUE_TYPE_FRAME:
         {
-            hyperValueList_t *tempValueList = &(heapValue->frameVariableList);
-            free(tempValueList->valueArray);
+            cleanUpHyperValueList(&(heapValue->frameVariableList));
             break;
         }
         case VALUE_TYPE_CUSTOM_FUNCTION:
         {
             customFunctionHandle_t *tempHandle = heapValue->customFunctionHandle;
-            if (tempHandle->aliasList != NULL) {
-                free(tempHandle->aliasList);
-            }
+            cleanUpHyperValueList(&(tempHandle->locationList));
             free(tempHandle);
             break;
         }
@@ -110,6 +113,22 @@ int8_t valueIsInHeap(value_t *value) {
     int8_t tempType = value->type;
     return (tempType == VALUE_TYPE_STRING || tempType == VALUE_TYPE_LIST
             || tempType == VALUE_TYPE_FRAME || tempType == VALUE_TYPE_CUSTOM_FUNCTION);
+}
+
+heapValue_t *getHeapValueFromHyperValue(hyperValue_t *hyperValue) {
+    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
+        return hyperValue->alias.container;
+    }
+    value_t *tempValue;
+    if (hyperValue->type == HYPER_VALUE_TYPE_VALUE) {
+        tempValue = &(hyperValue->value);
+    } else {
+        tempValue = hyperValue->valuePointer;
+    }
+    if (!valueIsInHeap(tempValue)) {
+        return NULL;
+    }
+    return tempValue->heapValue;
 }
 
 void deleteHeapValueIfUnreferenced(heapValue_t *heapValue) {
@@ -137,11 +156,11 @@ void lockValue(value_t *value) {
 }
 
 void lockHyperValue(hyperValue_t *hyperValue) {
-    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
-        lockHeapValue(hyperValue->alias.container);
-    } else {
-        lockValue(&(hyperValue->value));
+    heapValue_t *tempHeapValue = getHeapValueFromHyperValue(hyperValue);
+    if (tempHeapValue == NULL) {
+        return;
     }
+    lockHeapValue(tempHeapValue);
 }
 
 void unlockHeapValue(heapValue_t *heapValue) {
@@ -157,11 +176,11 @@ void unlockValue(value_t *value) {
 }
 
 void unlockHyperValue(hyperValue_t *hyperValue) {
-    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
-        unlockHeapValue(hyperValue->alias.container);
-    } else {
-        unlockValue(&(hyperValue->value));
+    heapValue_t *tempHeapValue = getHeapValueFromHyperValue(hyperValue);
+    if (tempHeapValue == NULL) {
+        return;
     }
+    unlockHeapValue(tempHeapValue);
 }
 
 void unlockFunctionInvocationValues(value_t *function, hyperValueList_t *hyperValueList) {
@@ -190,11 +209,11 @@ void addValueReference(value_t *value) {
 }
 
 void addHyperValueReference(hyperValue_t *hyperValue) {
-    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
-        addHeapValueReference(hyperValue->alias.container);
-    } else {
-        addValueReference(&(hyperValue->value));
+    heapValue_t *tempHeapValue = getHeapValueFromHyperValue(hyperValue);
+    if (tempHeapValue == NULL) {
+        return;
     }
+    addHeapValueReference(tempHeapValue);
 }
 
 void addValueReferencesInVector(vector_t *vector) {
@@ -219,11 +238,11 @@ void removeValueReferenceHelper(value_t *value, int8_t shouldRecur) {
 }
 
 void removeHyperValueReferenceHelper(hyperValue_t *hyperValue, int8_t shouldRecur) {
-    if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
-        removeHeapValueReferenceHelper(hyperValue->alias.container, shouldRecur);
-    } else {
-        removeValueReferenceHelper(&(hyperValue->value), shouldRecur);
+    heapValue_t *tempHeapValue = getHeapValueFromHyperValue(hyperValue);
+    if (tempHeapValue == NULL) {
+        return;
     }
+    removeHeapValueReferenceHelper(tempHeapValue, shouldRecur);
 }
 
 void removeHeapValueReference(heapValue_t *heapValue) {
@@ -251,7 +270,6 @@ void swapHyperValueReference(hyperValue_t *destination, hyperValue_t *source) {
 }
 
 void markValue(value_t *value);
-void markAlias(alias_t *alias);
 void markHyperValue(hyperValue_t *hyperValue);
 
 void markHeapValue(heapValue_t *heapValue, int8_t mark) {
@@ -289,10 +307,10 @@ void markHeapValue(heapValue_t *heapValue, int8_t mark) {
         case VALUE_TYPE_CUSTOM_FUNCTION:
         {
             customFunctionHandle_t *tempHandle = heapValue->customFunctionHandle;
-            int32_t tempLength = tempHandle->function->scope.aliasVariableAmount;
-            for (int32_t index = 0; index < tempLength; index++) {
-                alias_t *tempAlias = tempHandle->aliasList + index;
-                markAlias(tempAlias);
+            hyperValueList_t *tempValueList = &(tempHandle->locationList);
+            for (int32_t index = 0; index < tempValueList->length; index++) {
+                hyperValue_t *tempValue = tempValueList->valueArray + index;
+                markHyperValue(tempValue);
             }
             break;
         }
@@ -310,17 +328,17 @@ void markValue(value_t *value) {
     markHeapValue(value->heapValue, HEAP_VALUE_MARK_STRONG);
 }
 
-void markAlias(alias_t *alias) {
-    markHeapValue(alias->container, HEAP_VALUE_MARK_WEAK);
-    value_t tempValue = readValueFromAlias(*alias);
-    markValue(&tempValue);
-}
-
 void markHyperValue(hyperValue_t *hyperValue) {
     if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
-        markAlias(&(hyperValue->alias));
-    } else {
+        markHeapValue(hyperValue->alias.container, HEAP_VALUE_MARK_WEAK);
+        value_t tempValue = readValueFromAlias(hyperValue->alias, false);
+        markValue(&tempValue);
+    }
+    if (hyperValue->type == HYPER_VALUE_TYPE_VALUE) {
         markValue(&(hyperValue->value));
+    }
+    if (hyperValue->type == HYPER_VALUE_TYPE_POINTER) {
+        markValue(hyperValue->valuePointer);
     }
 }
 
@@ -472,20 +490,22 @@ value_t convertValueToString(value_t value, int8_t shouldCopy) {
     return output;
 }
 
-value_t readValueFromAlias(alias_t alias) {
+value_t readValueFromAlias(alias_t alias, int8_t shouldThrowError) {
     value_t output;
     output.type = VALUE_TYPE_VOID;
     heapValue_t *heapValue = alias.container;
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
         hyperValue_t *tempValue = heapValue->frameVariableList.valueArray + index;
-        // Note: tempValue cannot have type HYPER_VALUE_TYPE_ALIAS,
+        // Note: tempValue must have type HYPER_VALUE_TYPE_VALUE,
         // because this is an invariant of alias_t.
         return tempValue->value;
     }
     if (heapValue->type == VALUE_TYPE_LIST) {
         if (alias.index < 0 || alias.index >= heapValue->vector.length) {
-            THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Index is out of bounds.");
+            if (shouldThrowError) {
+                THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Index is out of bounds.");
+            }
             return output;
         }
         value_t output;
@@ -494,7 +514,9 @@ value_t readValueFromAlias(alias_t alias) {
     }
     if (heapValue->type == VALUE_TYPE_STRING) {
         if (alias.index < 0 || alias.index >= heapValue->vector.length - 1) {
-            THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Index is out of bounds.");
+            if (shouldThrowError) {
+                THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Index is out of bounds.");
+            }
             return output;
         }
         int8_t tempCharacter;
@@ -511,7 +533,7 @@ void writeValueToAlias(alias_t alias, value_t value) {
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
         hyperValue_t *tempValue = heapValue->frameVariableList.valueArray + index;
-        // Note: tempValue cannot have type HYPER_VALUE_TYPE_ALIAS,
+        // Note: tempValue must have type HYPER_VALUE_TYPE_VALUE,
         // because this is an invariant of alias_t.
         swapValueReference(&(tempValue->value), &value);
     }
@@ -537,19 +559,24 @@ void writeValueToAlias(alias_t alias, value_t value) {
     }
 }
 
-value_t resolveAliasValue(hyperValue_t hyperValue) {
+value_t readValueFromHyperValue(hyperValue_t hyperValue) {
     if (hyperValue.type == HYPER_VALUE_TYPE_ALIAS) {
-        return readValueFromAlias(hyperValue.alias);
+        return readValueFromAlias(hyperValue.alias, true);
+    }
+    if (hyperValue.type == HYPER_VALUE_TYPE_POINTER) {
+        return *(hyperValue.valuePointer);
     }
     return hyperValue.value;
 }
 
-void writeValueToAliasValue(hyperValue_t aliasValue, value_t value) {
-    if (aliasValue.type != HYPER_VALUE_TYPE_ALIAS) {
-        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected alias to value.");
-        return;
+void writeValueToLocation(hyperValue_t location, value_t value) {
+    if (location.type == HYPER_VALUE_TYPE_ALIAS) {
+        writeValueToAlias(location.alias, value);
+    } else if (location.type == HYPER_VALUE_TYPE_POINTER) {
+        swapValueReference(location.valuePointer, &value);
+    } else {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected value location.");
     }
-    writeValueToAlias(aliasValue.alias, value);
 }
 
 void printAllHeapValues() {

@@ -261,7 +261,7 @@ baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
     customFunction->base.argumentAmount = argumentAmount;
     scope_t *tempScope = &(customFunction->scope);
     tempScope->parentScope = &(lastCustomFunction->scope);
-    tempScope->aliasVariableAmount = 0;
+    tempScope->parentVariableAmount = 0;
     createEmptyVector(&(tempScope->variableList), sizeof(scopeVariable_t *));
     for (int32_t index = 0; index < argumentAmount; index++) {
         int8_t *tempIdentifier;
@@ -390,7 +390,7 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
     while (true) {
         bodyPosSkipWhitespace(bodyPos);
         int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
-        if (tempCharacter == '[') {
+        if (tempCharacter == '[' && precedence > 3) {
             bodyPos->index += 1;
             baseExpression_t *tempOperand = parseExpression(parser, 99);
             if (hasThrownError) {

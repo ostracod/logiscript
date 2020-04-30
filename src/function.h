@@ -40,8 +40,7 @@ typedef struct customFunction {
 
 typedef struct customFunctionHandle {
     customFunction_t *function;
-    // May be NULL if the function does not have any alias variables.
-    alias_t *aliasList;
+    hyperValueList_t locationList;
 } customFunctionHandle_t;
 
 builtInFunction_t *findBuiltInFunctionByName(int8_t *name);

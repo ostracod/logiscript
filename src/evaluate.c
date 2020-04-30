@@ -78,8 +78,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
         {
             variableExpression_t *variableExpression = (variableExpression_t *)expression;
             int32_t tempScopeIndex = variableExpression->variable->scopeIndex;
-            output.type = HYPER_VALUE_TYPE_ALIAS;
-            output.alias = getAliasToFrameVariable(frame, tempScopeIndex);
+            output = getFrameVariableLocation(frame, tempScopeIndex);
             break;
         }
         case EXPRESSION_TYPE_UNARY:
@@ -171,7 +170,7 @@ value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expre
         output.type = VALUE_TYPE_VOID;
         return output;
     }
-    value_t output = resolveAliasValue(tempHyperValue);
+    value_t output = readValueFromHyperValue(tempHyperValue);
     lockValue(&output);
     unlockHyperValue(&tempHyperValue);
     return output;

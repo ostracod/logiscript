@@ -33,7 +33,7 @@ scopeVariable_t *scopeAddVariable(
     output->parentScopeIndex = parentScopeIndex;
     pushVectorElement(&(scope->variableList), &output);
     if (parentScopeIndex >= 0) {
-        scope->aliasVariableAmount += 1;
+        scope->parentVariableAmount += 1;
     }
     return output;
 }
@@ -49,15 +49,16 @@ scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name) {
     return NULL;
 }
 
-alias_t getAliasToFrameVariable(heapValue_t *frame, int32_t index) {
+hyperValue_t getFrameVariableLocation(heapValue_t *frame, int32_t index) {
     hyperValue_t tempValue = frame->frameVariableList.valueArray[index];
-    if (tempValue.type == HYPER_VALUE_TYPE_ALIAS) {
-        return tempValue.alias;
+    if (tempValue.type == HYPER_VALUE_TYPE_VALUE) {
+        hyperValue_t output;
+        output.type = HYPER_VALUE_TYPE_ALIAS;
+        output.alias.container = frame;
+        output.alias.index = index;
+        return output;
     } else {
-        alias_t tempAlias;
-        tempAlias.container = frame;
-        tempAlias.index = index;
-        return tempAlias;
+        return tempValue;
     }
 }
 

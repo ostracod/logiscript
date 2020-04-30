@@ -53,7 +53,7 @@ script_t *importScript(int8_t *path) {
     topLevelFunction->base.argumentAmount = 0;
     scope_t *scope = &(topLevelFunction->scope);
     scope->parentScope = NULL;
-    scope->aliasVariableAmount = 0;
+    scope->parentVariableAmount = 0;
     createEmptyVector(&(scope->variableList), sizeof(scopeVariable_t *));
     output->topLevelFunction = topLevelFunction;
     createEmptyVector(&(output->namespaceList), sizeof(namespace_t *));

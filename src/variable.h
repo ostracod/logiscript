@@ -17,7 +17,7 @@ typedef struct scope scope_t;
 
 typedef struct scope {
     scope_t *parentScope;
-    int32_t aliasVariableAmount;
+    int32_t parentVariableAmount;
     // Function argument variables will preceed any other
     // variables in the scope. Argument variables will be
     // populated in the same order as provided by invocation.
@@ -31,7 +31,7 @@ scopeVariable_t *scopeAddVariable(
     int8_t allowDuplicates
 );
 scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name);
-alias_t getAliasToFrameVariable(heapValue_t *frame, int32_t index);
+hyperValue_t getFrameVariableLocation(heapValue_t *frame, int32_t index);
 
 // VARIABLE_HEADER_FILE
 #endif

@@ -14,6 +14,7 @@
 
 #define HYPER_VALUE_TYPE_VALUE 1
 #define HYPER_VALUE_TYPE_ALIAS 2
+#define HYPER_VALUE_TYPE_POINTER 3
 
 #define HEAP_VALUE_MARK_NONE 1
 #define HEAP_VALUE_MARK_WEAK 2
@@ -47,10 +48,12 @@ typedef struct hyperValue {
     union {
         value_t value;
         alias_t alias;
+        value_t *valuePointer;
     };
 } hyperValue_t;
 
 typedef struct hyperValueList {
+    // valueArray may be NULL if length is 0.
     hyperValue_t *valueArray;
     int32_t length;
 } hyperValueList_t;
@@ -85,7 +88,7 @@ void unlockValue(value_t *value);
 void unlockHyperValue(hyperValue_t *hyperValue);
 void unlockFunctionInvocationValues(value_t *function, hyperValueList_t *hyperValueList);
 void unlockValuesInVector(vector_t *vector);
-void addHeapValueReference(heapValue_t *heapValue);
+void addHyperValueReference(hyperValue_t *hyperValue);
 void addValueReferencesInVector(vector_t *vector);
 void swapHyperValueReference(hyperValue_t *destination, hyperValue_t *source);
 void markAndSweepHeapValues();
@@ -93,10 +96,10 @@ value_t createValueFromHeapValue(heapValue_t *heapValue);
 value_t copyValue(value_t value);
 value_t convertTextToStringValue(int8_t *text);
 value_t convertValueToString(value_t value, int8_t shouldCopy);
-value_t readValueFromAlias(alias_t alias);
+value_t readValueFromAlias(alias_t alias, int8_t shouldThrowError);
 void writeValueToAlias(alias_t alias, value_t value);
-value_t resolveAliasValue(hyperValue_t hyperValue);
-void writeValueToAliasValue(hyperValue_t aliasValue, value_t value);
+value_t readValueFromHyperValue(hyperValue_t hyperValue);
+void writeValueToLocation(hyperValue_t location, value_t value);
 void printAllHeapValues();
 
 #include "function.h"

@@ -67,7 +67,7 @@ hyperValue_t getArgument(hyperValueList_t *argumentList, int32_t index) {
 // contains an alias with a bad index.
 value_t getResolvedArgument(hyperValueList_t *argumentList, int32_t index) {
     hyperValue_t tempValue = getArgument(argumentList, index);
-    return resolveAliasValue(tempValue);
+    return readValueFromHyperValue(tempValue);
 }
 
 void invokeBuiltInFunction(
@@ -85,7 +85,7 @@ void invokeBuiltInFunction(
             if (hasThrownError) {
                 return;
             }
-            writeValueToAliasValue(getArgument(argumentList, 0), tempValue);
+            writeValueToLocation(getArgument(argumentList, 0), tempValue);
             break;
         }
         case BUILT_IN_FUNCTION_IF:
@@ -142,13 +142,13 @@ void invokeBuiltInFunction(
             if (hasThrownError) {
                 if ((int32_t)(tempChannel.numberValue) == thrownErrorChannel) {
                     hasThrownError = false;
-                    writeValueToAliasValue(tempDestination, thrownErrorValue);
+                    writeValueToLocation(tempDestination, thrownErrorValue);
                     unlockValue(&thrownErrorValue);
                 }
             } else {
                 value_t tempValue;
                 tempValue.type = VALUE_TYPE_VOID;
-                writeValueToAliasValue(tempDestination, tempValue);
+                writeValueToLocation(tempDestination, tempValue);
             }
             break;
         }
@@ -176,24 +176,26 @@ heapValue_t *createFunctionHandle(heapValue_t *frame, customFunction_t *customFu
     customFunctionHandle_t *tempHandle = malloc(sizeof(customFunctionHandle_t));
     tempHandle->function = customFunction;
     scope_t *tempScope = &(customFunction->scope);
-    int32_t tempLength = tempScope->aliasVariableAmount;
-    tempHandle->aliasList = malloc(sizeof(alias_t) * tempLength);
+    int32_t tempLength = tempScope->parentVariableAmount;
+    hyperValue_t *tempLocationArray = malloc(sizeof(hyperValue_t) * tempLength);
+    tempHandle->locationList.valueArray = tempLocationArray;
+    tempHandle->locationList.length = tempLength;
     int32_t scopeIndex = 0;
-    int32_t aliasIndex = 0;
-    while (scopeIndex < tempScope->variableList.length && aliasIndex < tempLength) {
+    int32_t locationIndex = 0;
+    while (scopeIndex < tempScope->variableList.length && locationIndex < tempLength) {
         scopeVariable_t *tempVariable;
         getVectorElement(&tempVariable, &(tempScope->variableList), scopeIndex);
         scopeIndex += 1;
         if (tempVariable->parentScopeIndex < 0) {
             continue;
         }
-        alias_t tempAlias = getAliasToFrameVariable(
+        hyperValue_t tempLocation = getFrameVariableLocation(
             frame,
             tempVariable->parentScopeIndex
         );
-        tempHandle->aliasList[aliasIndex] = tempAlias;
-        addHeapValueReference(tempAlias.container);
-        aliasIndex += 1;
+        tempLocationArray[locationIndex] = tempLocation;
+        addHyperValueReference(&tempLocation);
+        locationIndex += 1;
     }
     heapValue_t *output = createHeapValue(VALUE_TYPE_CUSTOM_FUNCTION);
     output->customFunctionHandle = tempHandle;
@@ -201,9 +203,8 @@ heapValue_t *createFunctionHandle(heapValue_t *frame, customFunction_t *customFu
 }
 
 heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
-    customFunction_t *customFunction = functionHandle->function;
-    alias_t *aliasList = functionHandle->aliasList;
-    scope_t *tempScope = &(customFunction->scope);
+    scope_t *tempScope = &(functionHandle->function->scope);
+    hyperValue_t *tempLocationArray = functionHandle->locationList.valueArray;
     int32_t tempLength = (int32_t)(tempScope->variableList.length);
     hyperValue_t *tempValueArray = malloc(sizeof(hyperValue_t) * tempLength);
     for (int32_t index = 0; index < tempLength; index++) {
@@ -213,16 +214,14 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
         tempValueArray[index] = tempValue;
     }
     int32_t scopeIndex = 0;
-    int32_t aliasIndex = 0;
+    int32_t locationIndex = 0;
     while (scopeIndex < tempLength) {
         scopeVariable_t *scopeVariable;
         getVectorElement(&scopeVariable, &(tempScope->variableList), scopeIndex);
         if (scopeVariable->parentScopeIndex >= 0) {
-            hyperValue_t tempValue;
-            tempValue.type = HYPER_VALUE_TYPE_ALIAS;
-            tempValue.alias = aliasList[aliasIndex];
-            swapHyperValueReference(tempValueArray + scopeIndex, &tempValue);
-            aliasIndex += 1;
+            hyperValue_t *tempLocation = tempLocationArray + locationIndex;
+            swapHyperValueReference(tempValueArray + scopeIndex, tempLocation);
+            locationIndex += 1;
         }
         scopeIndex += 1;
     }
