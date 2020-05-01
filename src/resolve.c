@@ -162,8 +162,25 @@ void resolveIdentifiersInExpression(
             resolveIdentifiersInExpression(scope, &(indexExpression->index));
             break;
         }
-        // TODO: Resolve identifiers in other expression types.
-        
+        case EXPRESSION_TYPE_INVOCATION:
+        {
+            invocationExpression_t *invocationExpression = (invocationExpression_t *)tempExpression;
+            resolveIdentifiersInExpression(scope, &(invocationExpression->function));
+            if (hasThrownError) {
+                return;
+            }
+            for (int64_t index = 0; index < invocationExpression->argumentList.length; index++) {
+                baseExpression_t **tempArgumentExpression = findVectorElement(
+                    &(invocationExpression->argumentList),
+                    index
+                );
+                resolveIdentifiersInExpression(scope, tempArgumentExpression);
+                if (hasThrownError) {
+                    return;
+                }
+            }
+            break;
+        }
         default:
         {
             break;

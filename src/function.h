@@ -49,7 +49,11 @@ heapValue_t *invokeFunctionHandle(
     heapValue_t *functionHandle,
     hyperValueList_t *argumentList
 );
-void invokeFunction(value_t functionValue, hyperValueList_t *argumentList);
+hyperValue_t invokeFunction(
+    value_t functionValue,
+    hyperValueList_t *argumentList,
+    int8_t hasDestinationArgument
+);
 
 // FUNCTION_HEADER_FILE
 #endif

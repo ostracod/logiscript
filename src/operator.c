@@ -111,11 +111,13 @@ value_t calculateBinaryOperator(
         case OPERATOR_EQUAL:
         {
             // TODO: Test equality of strings and lists.
+            output.type = VALUE_TYPE_NUMBER;
             output.numberValue = (operand1.numberValue == operand2.numberValue);
             break;
         }
         case OPERATOR_NOT_EQUAL:
         {
+            output.type = VALUE_TYPE_NUMBER;
             output.numberValue = (operand1.numberValue != operand2.numberValue);
             break;
         }

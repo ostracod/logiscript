@@ -100,7 +100,7 @@ void invokeBuiltInFunction(
                 return;
             }
             if (tempCondition.numberValue != 0) {
-                invokeFunction(tempHandle, NULL);
+                invokeFunction(tempHandle, NULL, false);
             }
             break;
         }
@@ -108,7 +108,7 @@ void invokeBuiltInFunction(
         {
             value_t tempHandle = getResolvedArgument(argumentList, 0);
             while (!hasThrownError) {
-                invokeFunction(tempHandle, NULL);
+                invokeFunction(tempHandle, NULL, false);
             }
             break;
         }
@@ -138,7 +138,7 @@ void invokeBuiltInFunction(
                 THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Channel must be a number.");
                 return;
             }
-            invokeFunction(tempHandle, NULL);
+            invokeFunction(tempHandle, NULL, false);
             if (hasThrownError) {
                 if ((int32_t)(tempChannel.numberValue) == thrownErrorChannel) {
                     hasThrownError = false;
@@ -262,17 +262,37 @@ heapValue_t *invokeFunctionHandle(
     return tempFrame;
 }
 
-void invokeFunction(value_t functionValue, hyperValueList_t *argumentList) {
+// Output will be locked.
+hyperValue_t invokeFunction(
+    value_t functionValue,
+    hyperValueList_t *argumentList,
+    int8_t hasDestinationArgument
+) {
+    hyperValue_t output;
+    output.type = HYPER_VALUE_TYPE_VALUE;
+    output.value.type = VALUE_TYPE_VOID;
     if (functionValue.type == VALUE_TYPE_BUILT_IN_FUNCTION) {
+        if (hasDestinationArgument) {
+            hyperValue_t *tempLocation = argumentList->valueArray + 0;
+            tempLocation->type = HYPER_VALUE_TYPE_POINTER;
+            tempLocation->valuePointer = &(output.value);
+        }
         invokeBuiltInFunction(functionValue.builtInFunction, argumentList);
-        return;
+        lockValue(&(output.value));
+        removeValueReference(&(output.value));
+        return output;
     }
     if (functionValue.type == VALUE_TYPE_CUSTOM_FUNCTION) {
         heapValue_t *tempFrame = invokeFunctionHandle(functionValue.heapValue, argumentList);
+        if (hasDestinationArgument) {
+            output = getFrameVariableLocation(tempFrame, 0);
+            lockHyperValue(&output);
+        }
         unlockHeapValue(tempFrame);
-        return;
+        return output;
     }
     THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected function handle.");
+    return output;
 }
 
 

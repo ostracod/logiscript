@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "utilities.h"
 #include "evaluate.h"
 #include "function.h"
 #include "expression.h"
@@ -30,7 +31,65 @@ hyperValue_t accessSequenceElement(value_t sequenceValue, value_t indexValue) {
     return output;
 }
 
+hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression);
 value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expression);
+
+// Output will be locked.
+hyperValue_t invokeFunctionWithExpressions(
+    heapValue_t *frame,
+    baseExpression_t *functionExpression,
+    vector_t *argumentExpressionList,
+    int8_t shouldAddDestinationArgument
+) {
+    hyperValue_t output;
+    output.type = HYPER_VALUE_TYPE_VALUE;
+    output.value.type = VALUE_TYPE_VOID;
+    int32_t tempOffset;
+    if (shouldAddDestinationArgument) {
+        tempOffset = 1;
+    } else {
+        tempOffset = 0;
+    }
+    int32_t tempLength = (int32_t)(argumentExpressionList->length) + tempOffset;
+    hyperValue_t tempValueArray[tempLength];
+    hyperValueList_t argumentList;
+    argumentList.valueArray = tempValueArray;
+    argumentList.length = tempLength;
+    for (int32_t index = 0; index < tempLength; index++) {
+        hyperValue_t *tempValue = tempValueArray + index;
+        tempValue->type = HYPER_VALUE_TYPE_VALUE;
+        tempValue->value.type = VALUE_TYPE_VOID;
+    }
+    value_t functionValue = evaluateAndResolveExpression(frame, functionExpression);
+    if (hasThrownError) {
+        unlockFunctionInvocationValues(
+            &functionValue,
+            &argumentList,
+            shouldAddDestinationArgument
+        );
+        return output;
+    }
+    for (int32_t index = tempOffset; index < tempLength; index++) {
+        baseExpression_t *tempExpression;
+        getVectorElement(&tempExpression, argumentExpressionList, index - tempOffset);
+        tempValueArray[index] = evaluateExpression(frame, tempExpression);
+        if (hasThrownError) {
+            unlockFunctionInvocationValues(
+                &functionValue,
+                &argumentList,
+                shouldAddDestinationArgument
+            );
+            return output;
+        }
+    }
+    output = invokeFunction(functionValue, &argumentList, shouldAddDestinationArgument);
+    unlockFunctionInvocationValues(
+        &functionValue,
+        &argumentList,
+        shouldAddDestinationArgument
+    );
+    return output;
+}
 
 // Output will be locked.
 hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression) {
@@ -152,6 +211,16 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
             unlockValue(&indexValue);
             break;
         }
+        case EXPRESSION_TYPE_INVOCATION:
+        {
+            invocationExpression_t *invocationExpression = (invocationExpression_t *)expression;
+            return invokeFunctionWithExpressions(
+                frame,
+                invocationExpression->function,
+                &(invocationExpression->argumentList),
+                true
+            );
+        }
         // TODO: Evaluate other types of expressions.
         
         default:
@@ -179,35 +248,12 @@ value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expre
 void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
     if (statement->type == STATEMENT_TYPE_INVOCATION) {
         invocationStatement_t *invocationStatement = (invocationStatement_t *)statement;
-        int32_t tempLength = (int32_t)(invocationStatement->argumentList.length);
-        hyperValue_t tempValueArray[tempLength];
-        hyperValueList_t argumentList;
-        argumentList.valueArray = tempValueArray;
-        argumentList.length = tempLength;
-        for (int32_t index = 0; index < tempLength; index++) {
-            hyperValue_t *tempValue = tempValueArray + index;
-            tempValue->type = HYPER_VALUE_TYPE_VALUE;
-            tempValue->value.type = VALUE_TYPE_VOID;
-        }
-        value_t functionValue = evaluateAndResolveExpression(
+        invokeFunctionWithExpressions(
             frame,
-            invocationStatement->function
+            invocationStatement->function,
+            &(invocationStatement->argumentList),
+            false
         );
-        if (hasThrownError) {
-            unlockFunctionInvocationValues(&functionValue, &argumentList);
-            return;
-        }
-        for (int32_t index = 0; index < tempLength; index++) {
-            baseExpression_t *tempExpression;
-            getVectorElement(&tempExpression, &(invocationStatement->argumentList), index);
-            tempValueArray[index] = evaluateExpression(frame, tempExpression);
-            if (hasThrownError) {
-                unlockFunctionInvocationValues(&functionValue, &argumentList);
-                return;
-            }
-        }
-        invokeFunction(functionValue, &argumentList);
-        unlockFunctionInvocationValues(&functionValue, &argumentList);
     }
     // TODO: Evaluate other types of statements.
     

@@ -183,9 +183,19 @@ void unlockHyperValue(hyperValue_t *hyperValue) {
     unlockHeapValue(tempHeapValue);
 }
 
-void unlockFunctionInvocationValues(value_t *function, hyperValueList_t *hyperValueList) {
+void unlockFunctionInvocationValues(
+    value_t *function,
+    hyperValueList_t *hyperValueList,
+    int8_t hasDestinationArgument
+) {
     unlockValue(function);
-    for (int32_t index = 0; index < hyperValueList->length; index++) {
+    int32_t tempOffset;
+    if (hasDestinationArgument) {
+        tempOffset = 1;
+    } else {
+        tempOffset = 0;
+    }
+    for (int32_t index = tempOffset; index < hyperValueList->length; index++) {
         unlockHyperValue(hyperValueList->valueArray + index);
     }
 }

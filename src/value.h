@@ -86,10 +86,15 @@ void lockHyperValue(hyperValue_t *hyperValue);
 void unlockHeapValue(heapValue_t *heapValue);
 void unlockValue(value_t *value);
 void unlockHyperValue(hyperValue_t *hyperValue);
-void unlockFunctionInvocationValues(value_t *function, hyperValueList_t *hyperValueList);
+void unlockFunctionInvocationValues(
+    value_t *function,
+    hyperValueList_t *hyperValueList,
+    int8_t hasDestinationArgument
+);
 void unlockValuesInVector(vector_t *vector);
 void addHyperValueReference(hyperValue_t *hyperValue);
 void addValueReferencesInVector(vector_t *vector);
+void removeValueReference(value_t *value);
 void swapHyperValueReference(hyperValue_t *destination, hyperValue_t *source);
 void markAndSweepHeapValues();
 value_t createValueFromHeapValue(heapValue_t *heapValue);

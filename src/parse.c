@@ -406,6 +406,13 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             output = createIndexExpression(output, tempOperand);
             continue;
         }
+        if (tempCharacter == '(' && precedence > 3) {
+            bodyPos->index += 1;
+            vector_t tempList;
+            parseExpressionList(&tempList, parser, ')');
+            output = createInvocationExpression(output, &tempList);
+            continue;
+        }
         tempOperator = bodyPosGetOperator(bodyPos, OPERATOR_ARRANGEMENT_BINARY);
         if (tempOperator != NULL && tempOperator->precedence < precedence) {
             if (tempOperator->number == OPERATOR_NAMESPACE) {

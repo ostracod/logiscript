@@ -74,4 +74,15 @@ baseExpression_t *createIndexExpression(
     return (baseExpression_t *)output;
 }
 
+baseExpression_t *createInvocationExpression(
+    baseExpression_t *functionExpression,
+    vector_t *expressionList
+) {
+    invocationExpression_t *output = malloc(sizeof(invocationExpression_t));
+    output->base.type = EXPRESSION_TYPE_INVOCATION;
+    output->function = functionExpression;
+    output->argumentList = *expressionList;
+    return (baseExpression_t *)output;
+}
+
 

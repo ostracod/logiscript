@@ -96,6 +96,10 @@ baseExpression_t *createIndexExpression(
     baseExpression_t *sequenceExpression,
     baseExpression_t *indexExpression
 );
+baseExpression_t *createInvocationExpression(
+    baseExpression_t *functionExpression,
+    vector_t *expressionList
+);
 
 // EXPRESSION_HEADER_FILE
 #endif
