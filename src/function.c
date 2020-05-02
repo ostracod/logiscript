@@ -139,6 +139,43 @@ value_t convertValueToType(value_t value, double typeConstant) {
     return output;
 }
 
+void resizeSequence(value_t sequence, int64_t size) {
+    if (size < 0) {
+        THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Size must be non-negative.");
+        return;
+    }
+    if (sequence.type == VALUE_TYPE_STRING) {
+        vector_t *tempVector = &(sequence.heapValue->vector);
+        int64_t oldSize = tempVector->length - 1;
+        setVectorLength(tempVector, size + 1);
+        int8_t tempCharacter = 0;
+        setVectorElement(tempVector, size, &tempCharacter);
+        if (oldSize >= size) {
+            return;
+        }
+        tempCharacter = ' ';
+        fillVector(tempVector, oldSize, size, &tempCharacter);
+    } else if (sequence.type == VALUE_TYPE_LIST) {
+        vector_t *tempVector = &(sequence.heapValue->vector);
+        int64_t oldSize = tempVector->length;
+        if (oldSize > size) {
+            for (int64_t index = size; index < oldSize; index++) {
+                value_t *tempValue = findVectorElement(tempVector, index);
+                removeValueReference(tempValue);
+            }
+        }
+        setVectorLength(tempVector, size);
+        if (oldSize >= size) {
+            return;
+        }
+        value_t tempValue;
+        tempValue.type = VALUE_TYPE_VOID;
+        fillVector(tempVector, oldSize, size, &tempValue);
+    } else {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Value must be a sequence.");
+    }
+}
+
 void invokeBuiltInFunction(
     builtInFunction_t *builtInFunction,
     hyperValueList_t *argumentList
@@ -185,6 +222,39 @@ void invokeBuiltInFunction(
                 return;
             }
             writeValueToLocation(getArgument(argumentList, 0), tempResult);
+            break;
+        }
+        case BUILT_IN_FUNCTION_SIZE:
+        {
+            value_t tempValue = getResolvedArgument(argumentList, 1);
+            if (hasThrownError) {
+                return;
+            }
+            value_t tempResult;
+            tempResult.type = VALUE_TYPE_NUMBER;
+            if (tempValue.type == VALUE_TYPE_STRING) {
+                tempResult.numberValue = tempValue.heapValue->vector.length - 1;
+            } else if (tempValue.type == VALUE_TYPE_LIST) {
+                tempResult.numberValue = tempValue.heapValue->vector.length;
+            } else {
+                THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Value must be a sequence.");
+                return;
+            }
+            writeValueToLocation(getArgument(argumentList, 0), tempResult);
+            break;
+        }
+        case BUILT_IN_FUNCTION_RESIZE:
+        {
+            value_t tempValue = getResolvedArgument(argumentList, 0);
+            value_t tempSize = getResolvedArgument(argumentList, 1);
+            if (hasThrownError) {
+                return;
+            }
+            if (tempSize.type != VALUE_TYPE_NUMBER) {
+                THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Size must be a number.");
+                return;
+            }
+            resizeSequence(tempValue, (int64_t)(tempSize.numberValue));
             break;
         }
         case BUILT_IN_FUNCTION_IF:
@@ -262,8 +332,20 @@ void invokeBuiltInFunction(
             deleteValueIfUnreferenced(&stringValue);
             break;
         }
-        // TODO: Implement more built-in functions.
-        
+        case BUILT_IN_FUNCTION_PROMPT:
+        {
+            printf("> ");
+            int8_t *tempText = NULL;
+            size_t tempLength = 0;
+            int64_t tempCount = getline((char **)&tempText, &tempLength, stdin);
+            if (tempText[tempCount - 1] == '\n') {
+                tempText[tempCount - 1] = 0;
+            }
+            value_t tempValue = convertTextToStringValue(tempText);
+            free(tempText);
+            writeValueToLocation(getArgument(argumentList, 0), tempValue);
+            break;
+        }
         default:
         {
             break;

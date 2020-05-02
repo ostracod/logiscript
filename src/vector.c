@@ -114,4 +114,10 @@ int8_t vectorsAreEqual(vector_t *vector1, vector_t *vector2) {
     return true;
 }
 
+void fillVector(vector_t *vector, int64_t startIndex, int64_t endIndex, void *source) {
+    for (int64_t index = startIndex; index < endIndex; index++) {
+        setVectorElement(vector, index, source);
+    }
+}
+
 

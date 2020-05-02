@@ -29,6 +29,7 @@ void popVectorElement(void *destination, vector_t *vector);
 void insertVectorIntoVector(vector_t *vector, int64_t index, vector_t *source);
 void pushVectorOntoVector(vector_t *vector, vector_t *source);
 int8_t vectorsAreEqual(vector_t *vector1, vector_t *vector2);
+void fillVector(vector_t *vector, int64_t startIndex, int64_t endIndex, void *source);
 
 // VECTOR_HEADER_FILE
 #endif
