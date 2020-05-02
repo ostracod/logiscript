@@ -332,6 +332,18 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             output = createConstantExpression(tempValue);
         } else {
             switch (firstCharacter) {
+                case '(':
+                {
+                    bodyPos->index += 1;
+                    output = parseExpression(parser, 99);
+                    int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+                    if (tempCharacter != ')') {
+                        THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected ')'.");
+                        return NULL;
+                    }
+                    bodyPos->index += 1;
+                    break;
+                }
                 case '\'':
                 {
                     bodyPos->index += 1;

@@ -7,6 +7,7 @@
 #include "function.h"
 #include "evaluate.h"
 #include "error.h"
+#include "resolve.h"
 
 builtInFunction_t builtInFunctionSet[] = {
     {{FUNCTION_TYPE_BUILT_IN, 2}, (int8_t *)"SET", BUILT_IN_FUNCTION_SET},
@@ -70,6 +71,74 @@ value_t getResolvedArgument(hyperValueList_t *argumentList, int32_t index) {
     return readValueFromHyperValue(tempValue);
 }
 
+double convertNativeTypeToConstant(int8_t nativeType) {
+    if (nativeType == VALUE_TYPE_NUMBER) {
+        return NUMBER_TYPE_CONSTANT;
+    }
+    if (nativeType == VALUE_TYPE_STRING) {
+        return STRING_TYPE_CONSTANT;
+    }
+    if (nativeType == VALUE_TYPE_LIST) {
+        return LIST_TYPE_CONSTANT;
+    }
+    if (nativeType == VALUE_TYPE_BUILT_IN_FUNCTION
+            || nativeType == VALUE_TYPE_CUSTOM_FUNCTION) {
+        return FUNCTION_TYPE_CONSTANT;
+    }
+    if (nativeType == VALUE_TYPE_VOID) {
+        return VOID_TYPE_CONSTANT;
+    }
+    return -1;
+}
+
+value_t convertValueToType(value_t value, double typeConstant) {
+    double tempTypeConstant = convertNativeTypeToConstant(value.type);
+    if (tempTypeConstant == typeConstant) {
+        return copyValue(value);
+    }
+    value_t output;
+    output.type = VALUE_TYPE_VOID;
+    if (typeConstant == NUMBER_TYPE_CONSTANT) {
+        if (value.type == VALUE_TYPE_STRING) {
+            int8_t *tempText = value.heapValue->vector.data;
+            double tempNumber;
+            int32_t tempResult = sscanf((char *)tempText, "%lf", &tempNumber);
+            if (tempResult < 1) {
+                THROW_BUILT_IN_ERROR(
+                    DATA_ERROR_CONSTANT,
+                    "Malformed number string."
+                );
+                return output;
+            }
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = tempNumber;
+            return output;
+        }
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Cannot convert value to number.");
+        return output;
+    }
+    if (typeConstant == STRING_TYPE_CONSTANT) {
+        return convertValueToString(value, true);
+    }
+    if (typeConstant == LIST_TYPE_CONSTANT) {
+        // I thought about string to list conversion on a character basis, but
+        // it wouldn't make sense in the context of list to string conversion.
+        // It also wouldn't be very useful.
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Cannot convert value to list.");
+        return output;
+    }
+    if (typeConstant == FUNCTION_TYPE_CONSTANT) {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Cannot convert value to function.");
+        return output;
+    }
+    if (typeConstant == VOID_TYPE_CONSTANT) {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Cannot convert value to void.");
+        return output;
+    }
+    THROW_BUILT_IN_ERROR(NUMBER_ERROR_CONSTANT, "Invalid type constant.");
+    return output;
+}
+
 void invokeBuiltInFunction(
     builtInFunction_t *builtInFunction,
     hyperValueList_t *argumentList
@@ -86,6 +155,36 @@ void invokeBuiltInFunction(
                 return;
             }
             writeValueToLocation(getArgument(argumentList, 0), tempValue);
+            break;
+        }
+        case BUILT_IN_FUNCTION_TYPE:
+        {
+            value_t tempValue = getResolvedArgument(argumentList, 1);
+            if (hasThrownError) {
+                return;
+            }
+            value_t tempResult;
+            tempResult.type = VALUE_TYPE_NUMBER;
+            tempResult.numberValue = convertNativeTypeToConstant(tempValue.type);
+            writeValueToLocation(getArgument(argumentList, 0), tempResult);
+            break;
+        }
+        case BUILT_IN_FUNCTION_CONVERT:
+        {
+            value_t tempValue = getResolvedArgument(argumentList, 1);
+            value_t tempType = getResolvedArgument(argumentList, 2);
+            if (hasThrownError) {
+                return;
+            }
+            if (tempType.type != VALUE_TYPE_NUMBER) {
+                THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Type must be a number.");
+                return;
+            }
+            value_t tempResult = convertValueToType(tempValue, tempType.numberValue);
+            if (hasThrownError) {
+                return;
+            }
+            writeValueToLocation(getArgument(argumentList, 0), tempResult);
             break;
         }
         case BUILT_IN_FUNCTION_IF:
