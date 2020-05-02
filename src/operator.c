@@ -82,14 +82,94 @@ value_t calculateUnaryOperator(operator_t *operator, value_t operand) {
             output.numberValue = -tempNumber;
             break;
         }
-        // TODO: Calculate with more unary operators.
-        
+        case OPERATOR_BITWISE_NOT:
+        {
+            output.numberValue = ~(uint32_t)tempNumber;
+            break;
+        }
+        case OPERATOR_LOGICAL_NOT:
+        {
+            output.numberValue = (tempNumber == 0);
+            break;
+        }
         default:
         {
             break;
         }
     }
     return output;
+}
+
+value_t concatenateSequences(value_t value1, value_t value2) {
+    value_t output;
+    output.type = VALUE_TYPE_VOID;
+    if (value1.type == VALUE_TYPE_STRING && value2.type == VALUE_TYPE_STRING) {
+        output = copyValue(value1);
+        popVectorElement(NULL, &(output.heapValue->vector));
+        pushVectorOntoVector(&(output.heapValue->vector), &(value2.heapValue->vector));
+        return output;
+    }
+    if (value1.type == VALUE_TYPE_LIST && value2.type == VALUE_TYPE_LIST) {
+        output = copyValue(value1);
+        addValueReferencesInVector(&(value2.heapValue->vector));
+        pushVectorOntoVector(&(output.heapValue->vector), &(value2.heapValue->vector));
+        return output;
+    }
+    THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Invalid types for concatenation.");
+    return output;
+}
+
+int8_t valuesAreIdentical(value_t value1, value_t value2);
+
+int8_t valuesAreEqual(value_t value1, value_t value2) {
+    if (value1.type != value2.type) {
+        return false;
+    }
+    if (value1.type == VALUE_TYPE_NUMBER) {
+        return (value1.numberValue == value2.numberValue);
+    }
+    if (value1.type == VALUE_TYPE_STRING) {
+        vector_t *tempVector1 = &(value1.heapValue->vector);
+        vector_t *tempVector2 = &(value2.heapValue->vector);
+        return vectorsAreEqual(tempVector1, tempVector2);
+    }
+    if (value1.type == VALUE_TYPE_LIST) {
+        vector_t *tempVector1 = &(value1.heapValue->vector);
+        vector_t *tempVector2 = &(value2.heapValue->vector);
+        if (tempVector1->length != tempVector2->length) {
+            return false;
+        }
+        for (int64_t index = 0; index < tempVector1->length; index++) {
+            value_t tempValue1;
+            value_t tempValue2;
+            getVectorElement(&tempValue1, tempVector1, index);
+            getVectorElement(&tempValue2, tempVector2, index);
+            if (!valuesAreIdentical(tempValue1, tempValue2)) {
+                return false;
+            }
+            return true;
+        }
+    }
+    if (value1.type == VALUE_TYPE_BUILT_IN_FUNCTION) {
+        return (value1.builtInFunction == value2.builtInFunction);
+    }
+    if (value1.type == VALUE_TYPE_CUSTOM_FUNCTION) {
+        customFunctionHandle_t *tempHandle1 = value1.heapValue->customFunctionHandle;
+        customFunctionHandle_t *tempHandle2 = value2.heapValue->customFunctionHandle;
+        return (tempHandle1->function == tempHandle2->function);
+    }
+    return true;
+}
+
+int8_t valuesAreIdentical(value_t value1, value_t value2) {
+    if (value1.type != value2.type) {
+        return false;
+    }
+    if (value1.type == VALUE_TYPE_STRING || value1.type == VALUE_TYPE_LIST
+            || value1.type == VALUE_TYPE_CUSTOM_FUNCTION) {
+        return (value1.heapValue == value2.heapValue);
+    }
+    return valuesAreEqual(value1, value2);
 }
 
 value_t calculateBinaryOperator(
@@ -103,22 +183,36 @@ value_t calculateBinaryOperator(
     switch (operator->number) {
         case OPERATOR_ADD:
         {
-            // TODO: Support concatenation.
-            output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = operand1.numberValue + operand2.numberValue;
+            if (operand1.type == VALUE_TYPE_NUMBER && operand2.type == VALUE_TYPE_NUMBER) {
+                output.type = VALUE_TYPE_NUMBER;
+                output.numberValue = operand1.numberValue + operand2.numberValue;
+            } else {
+                output = concatenateSequences(operand1, operand2);
+            }
             break;
         }
         case OPERATOR_EQUAL:
         {
-            // TODO: Test equality of strings and lists.
             output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = (operand1.numberValue == operand2.numberValue);
+            output.numberValue = valuesAreEqual(operand1, operand2);
             break;
         }
         case OPERATOR_NOT_EQUAL:
         {
             output.type = VALUE_TYPE_NUMBER;
-            output.numberValue = (operand1.numberValue != operand2.numberValue);
+            output.numberValue = !valuesAreEqual(operand1, operand2);
+            break;
+        }
+        case OPERATOR_IDENTICAL:
+        {
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = valuesAreIdentical(operand1, operand2);
+            break;
+        }
+        case OPERATOR_NOT_IDENTICAL:
+        {
+            output.type = VALUE_TYPE_NUMBER;
+            output.numberValue = !valuesAreIdentical(operand1, operand2);
             break;
         }
         default:
@@ -166,6 +260,46 @@ value_t calculateBinaryOperator(
             output.numberValue = fmod(tempNumber1, tempNumber2);
             break;
         }
+        case OPERATOR_BITWISE_OR:
+        {
+            output.numberValue = (uint32_t)tempNumber1 | (uint32_t)tempNumber2;
+            break;
+        }
+        case OPERATOR_BITWISE_AND:
+        {
+            output.numberValue = (uint32_t)tempNumber1 & (uint32_t)tempNumber2;
+            break;
+        }
+        case OPERATOR_BITWISE_XOR:
+        {
+            output.numberValue = (uint32_t)tempNumber1 ^ (uint32_t)tempNumber2;
+            break;
+        }
+        case OPERATOR_BITSHIFT_LEFT:
+        {
+            output.numberValue = (uint32_t)tempNumber1 << (uint32_t)tempNumber2;
+            break;
+        }
+        case OPERATOR_BITSHIFT_RIGHT:
+        {
+            output.numberValue = (uint32_t)tempNumber1 >> (uint32_t)tempNumber2;
+            break;
+        }
+        case OPERATOR_LOGICAL_OR:
+        {
+            output.numberValue = ((tempNumber1 != 0) || (tempNumber2 != 0));
+            break;
+        }
+        case OPERATOR_LOGICAL_AND:
+        {
+            output.numberValue = ((tempNumber1 != 0) && (tempNumber2 != 0));
+            break;
+        }
+        case OPERATOR_LOGICAL_XOR:
+        {
+            output.numberValue = ((tempNumber1 != 0) != (tempNumber2 != 0));
+            break;
+        }
         case OPERATOR_GREATER:
         {
             output.numberValue = (tempNumber1 > tempNumber2);
@@ -186,8 +320,6 @@ value_t calculateBinaryOperator(
             output.numberValue = (tempNumber1 <= tempNumber2);
             break;
         }
-        // TODO: Calculate with more binary operators.
-        
         default:
         {
             break;

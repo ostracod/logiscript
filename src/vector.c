@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "utilities.h"
 #include "vector.h"
 
 void createEmptyVector(vector_t *destination, int64_t elementSize) {
@@ -77,7 +78,9 @@ void pushVectorElement(vector_t *vector, void *source) {
 
 void popVectorElement(void *destination, vector_t *vector) {
     int64_t index = vector->length - 1;
-    getVectorElement(destination, vector, index);
+    if (destination != NULL) {
+        getVectorElement(destination, vector, index);
+    }
     removeVectorElement(vector, index);
 }
 
@@ -97,6 +100,18 @@ void pushVectorElementArray(vector_t *vector, void *source, int64_t amount) {
 
 void pushVectorOntoVector(vector_t *vector, vector_t *source) {
     insertVectorIntoVector(vector, vector->length, source);
+}
+
+int8_t vectorsAreEqual(vector_t *vector1, vector_t *vector2) {
+    if (vector1->length != vector2->length) {
+        return false;
+    }
+    for (int64_t index = 0; index < vector1->length * vector1->elementSize; index++) {
+        if (vector1->data[index] != vector2->data[index]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 
