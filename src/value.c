@@ -489,8 +489,11 @@ value_t convertValueToString(value_t value, int8_t shouldCopy) {
             pushVectorElement(&tempVector, &tempCharacter);
             return convertCharacterVectorToStringValue(&tempVector);
         }
-        // TODO: Convert more values to strings.
-        
+        case VALUE_TYPE_BUILT_IN_FUNCTION:
+        case VALUE_TYPE_CUSTOM_FUNCTION:
+        {
+            return convertTextToStringValue((int8_t *)"(Function)");
+        }
         default: {
             break;
         }

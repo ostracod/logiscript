@@ -332,6 +332,36 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             output = createConstantExpression(tempValue);
         } else {
             switch (firstCharacter) {
+                case '\'':
+                {
+                    bodyPos->index += 1;
+                    int8_t tempNumber = bodyPosGetCharacter(bodyPos);
+                    if (characterIsEndOfLine(tempNumber)) {
+                        THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Malformed character.");
+                        return NULL;
+                    }
+                    bodyPos->index += 1;
+                    if (tempNumber == '\\') {
+                        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+                        if (characterIsEndOfLine(tempCharacter)) {
+                            THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Malformed character.");
+                            return NULL;
+                        }
+                        bodyPos->index += 1;
+                        tempNumber = escapeCharacter(tempCharacter);
+                    }
+                    int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+                    if (tempCharacter != '\'') {
+                        THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Malformed character.");
+                        return NULL;
+                    }
+                    bodyPos->index += 1;
+                    value_t tempValue;
+                    tempValue.type = VALUE_TYPE_NUMBER;
+                    tempValue.numberValue = tempNumber;
+                    output = createConstantExpression(tempValue);
+                    break;
+                }
                 case '"':
                 {
                     bodyPos->index += 1;
@@ -352,8 +382,6 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
                     output = parseCustomFunctionExpression(parser);
                     break;
                 }
-                // TODO: Handle more types of expressions.
-                
                 default:
                 {
                     THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected expression.");
