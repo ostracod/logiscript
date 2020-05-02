@@ -8,6 +8,7 @@
 #include "resolve.h"
 
 errorConstant_t errorConstantSet[] = {
+    {(int8_t *)"PARSE_ERROR", PARSE_ERROR_CONSTANT},
     {(int8_t *)"TYPE_ERROR", TYPE_ERROR_CONSTANT},
     {(int8_t *)"NUMBER_ERROR", NUMBER_ERROR_CONSTANT},
     {(int8_t *)"DATA_ERROR", DATA_ERROR_CONSTANT},

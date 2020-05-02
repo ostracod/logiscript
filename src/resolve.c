@@ -90,7 +90,7 @@ baseExpression_t *resolveIdentifierExpression(
     // TODO: Resolve other types of identifiers.
     
     THROW_BUILT_IN_ERROR(
-        DATA_ERROR_CONSTANT,
+        PARSE_ERROR_CONSTANT,
         "Unknown identifier \"%s\".",
         tempName
     );

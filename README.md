@@ -260,6 +260,7 @@ Built-in errors have the format `[<error number>, <error message>]`. The channel
 
 The following error number constants are used in built-in errors:
 
+* `PARSE_ERROR` &ndash; Thrown when a script could not be parsed
 * `TYPE_ERROR` &ndash; Thrown when a value has the wrong type
 * `NUMBER_ERROR` &ndash; Thrown when a number is not in an acceptable range
 * `DATA_ERROR` &ndash; Thrown when a data structure contains malformed data

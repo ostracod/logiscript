@@ -20,7 +20,7 @@ scopeVariable_t *scopeAddVariable(
             return tempVariable;
         } else {
             THROW_BUILT_IN_ERROR(
-                DATA_ERROR_CONSTANT,
+                PARSE_ERROR_CONSTANT,
                 "Duplicate variable \"%s\".",
                 name
             );

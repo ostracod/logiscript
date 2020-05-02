@@ -140,7 +140,7 @@ int8_t *parseIdentifier(parser_t *parser) {
     bodyPos_t *bodyPos = parser->bodyPos;
     int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
     if (!isFirstIdentifierCharacter(tempCharacter)) {
-        THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected identifier.");
+        THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Expected identifier.");
         return NULL;
     }
     bodyPos_t startBodyPos = *bodyPos;
@@ -179,10 +179,10 @@ void parseCommaSeparatedValues(
                 bodyPosSkipWhitespace(bodyPos);
             } else {
                 if (endCharacter < 0) {
-                    THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected ',' or end of line.");
+                    THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Expected ',' or end of line.");
                 } else {
                     THROW_BUILT_IN_ERROR(
-                        DATA_ERROR_CONSTANT,
+                        PARSE_ERROR_CONSTANT,
                         "Expected ',' or '%c'.",
                         endCharacter
                     );
@@ -223,7 +223,7 @@ baseExpression_t *parseStringConstantExpression(parser_t *parser) {
     while (true) {
         int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
         if (characterIsEndOfLine(tempCharacter)) {
-            THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected '\"'.");
+            THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Expected '\"'.");
             return NULL;
         }
         bodyPos->index += 1;
@@ -310,7 +310,7 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
                     decimalPointCount += 1;
                     if (decimalPointCount > 1) {
                         THROW_BUILT_IN_ERROR(
-                            DATA_ERROR_CONSTANT,
+                            PARSE_ERROR_CONSTANT,
                             "Malformed number literal."
                         );
                         return NULL;
@@ -321,7 +321,7 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             int32_t tempResult = sscanf((char *)tempText, "%lf", &tempNumber);
             if (tempResult < 1) {
                 THROW_BUILT_IN_ERROR(
-                    DATA_ERROR_CONSTANT,
+                    PARSE_ERROR_CONSTANT,
                     "Malformed number literal."
                 );
                 return NULL;
@@ -338,7 +338,7 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
                     output = parseExpression(parser, 99);
                     int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
                     if (tempCharacter != ')') {
-                        THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected ')'.");
+                        THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Expected ')'.");
                         return NULL;
                     }
                     bodyPos->index += 1;
@@ -349,14 +349,14 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
                     bodyPos->index += 1;
                     int8_t tempNumber = bodyPosGetCharacter(bodyPos);
                     if (characterIsEndOfLine(tempNumber)) {
-                        THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Malformed character.");
+                        THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Malformed character.");
                         return NULL;
                     }
                     bodyPos->index += 1;
                     if (tempNumber == '\\') {
                         int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
                         if (characterIsEndOfLine(tempCharacter)) {
-                            THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Malformed character.");
+                            THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Malformed character.");
                             return NULL;
                         }
                         bodyPos->index += 1;
@@ -364,7 +364,7 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
                     }
                     int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
                     if (tempCharacter != '\'') {
-                        THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Malformed character.");
+                        THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Malformed character.");
                         return NULL;
                     }
                     bodyPos->index += 1;
@@ -396,7 +396,7 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
                 }
                 default:
                 {
-                    THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected expression.");
+                    THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Expected expression.");
                     return NULL;
                 }
             }
@@ -412,7 +412,7 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
         }
         if (tempOperator->number == OPERATOR_DECLARE) {
             if (tempOperand->type != EXPRESSION_TYPE_IDENTIFIER) {
-                THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected identifier.");
+                THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Expected identifier.");
                 return NULL;
             }
             identifierExpression_t *identifierExpression = (identifierExpression_t *)tempOperand;
@@ -439,7 +439,7 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
             bodyPosSkipWhitespace(bodyPos);
             int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
             if (tempCharacter != ']') {
-                THROW_BUILT_IN_ERROR(DATA_ERROR_CONSTANT, "Expected ']'.");
+                THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Expected ']'.");
                 return NULL;
             }
             bodyPos->index += 1;
@@ -547,7 +547,7 @@ void parseStatementList(vector_t *destination, parser_t *parser, int8_t endChara
         if (tempHasReachedEnd) {
             if (endCharacter >= 0) {
                 THROW_BUILT_IN_ERROR(
-                    DATA_ERROR_CONSTANT,
+                    PARSE_ERROR_CONSTANT,
                     "Expected '%c'.",
                     endCharacter
                 );
