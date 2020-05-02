@@ -262,11 +262,11 @@ baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
     scope_t *tempScope = &(customFunction->scope);
     tempScope->parentScope = &(lastCustomFunction->scope);
     tempScope->parentVariableAmount = 0;
-    createEmptyVector(&(tempScope->variableList), sizeof(scopeVariable_t *));
+    createEmptyVector(&(tempScope->variableList), sizeof(baseScopeVariable_t *));
     for (int32_t index = 0; index < argumentAmount; index++) {
         int8_t *tempIdentifier;
         getVectorElement(&tempIdentifier, &identifierList, index);
-        scopeAddVariable(tempScope, tempIdentifier, -1, false);
+        scopeAddArgumentVariable(tempScope, tempIdentifier);
     }
     if (hasThrownError) {
         return NULL;
@@ -416,11 +416,9 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
                 return NULL;
             }
             identifierExpression_t *identifierExpression = (identifierExpression_t *)tempOperand;
-            scopeAddVariable(
+            scopeAddLocalVariable(
                 &(parser->customFunction->scope),
-                identifierExpression->name,
-                -1,
-                true
+                identifierExpression->name
             );
             output = tempOperand;
         } else {

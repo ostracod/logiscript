@@ -15,11 +15,6 @@ typedef struct script {
     vector_t namespaceList; // Vector of pointers to namespace_t.
 } script_t;
 
-typedef struct namespace {
-    int8_t *name;
-    script_t *script;
-} namespace_t;
-
 script_t *importScript(int8_t *path);
 
 // SCRIPT_HEADER_FILE

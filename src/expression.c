@@ -28,7 +28,7 @@ baseExpression_t *createListExpression(vector_t *expressionList) {
     return (baseExpression_t *)output;
 }
 
-baseExpression_t *createVariableExpression(scopeVariable_t *variable) {
+baseExpression_t *createVariableExpression(baseScopeVariable_t *variable) {
     variableExpression_t *output = malloc(sizeof(variableExpression_t));
     output->base.type = EXPRESSION_TYPE_VARIABLE;
     output->variable = variable;

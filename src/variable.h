@@ -2,16 +2,31 @@
 #ifndef VARIABLE_HEADER_FILE
 #define VARIABLE_HEADER_FILE
 
+#define SCOPE_VARIABLE_TYPE_ARGUMENT 1
+#define SCOPE_VARIABLE_TYPE_LOCAL 2
+#define SCOPE_VARIABLE_TYPE_PARENT 3
+#define SCOPE_VARIABLE_TYPE_IMPORT 4
+
 #include "vector.h"
 #include "value.h"
 
-typedef struct scopeVariable {
+typedef struct baseScopeVariable {
+    int8_t type;
     int8_t *name;
     int32_t scopeIndex;
-    // parentScopeIndex will be -1 if the scope variable does
-    // not alias a variable in the parent scope.
+} baseScopeVariable_t;
+
+typedef struct parentScopeVariable {
+    baseScopeVariable_t base;
     int32_t parentScopeIndex;
-} scopeVariable_t;
+} parentScopeVariable_t;
+
+typedef struct namespace namespace_t;
+
+typedef struct importScopeVariable {
+    baseScopeVariable_t base;
+    namespace_t *namespace;
+} importScopeVariable_t;
 
 typedef struct scope scope_t;
 
@@ -21,16 +36,27 @@ typedef struct scope {
     // Function argument variables will preceed any other
     // variables in the scope. Argument variables will be
     // populated in the same order as provided by invocation.
-    vector_t variableList; // Vector of pointers to scopeVariable_t.
+    vector_t variableList; // Vector of pointers to baseScopeVariable_t.
 } scope_t;
 
-scopeVariable_t *scopeAddVariable(
+typedef struct namespace {
+    int8_t *name;
+    vector_t variableList; // Vector of pointers to importScopeVariable_t.
+} namespace_t;
+
+baseScopeVariable_t *scopeAddArgumentVariable(scope_t *scope, int8_t *name);
+baseScopeVariable_t *scopeAddLocalVariable(scope_t *scope, int8_t *name);
+baseScopeVariable_t *scopeAddParentVariable(
     scope_t *scope,
     int8_t *name,
-    int32_t parentScopeIndex,
-    int8_t allowDuplicates
+    int32_t parentScopeIndex
 );
-scopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name);
+baseScopeVariable_t *scopeAddImportVariable(
+    scope_t *scope,
+    int8_t *name,
+    namespace_t *namespace
+);
+baseScopeVariable_t *scopeFindVariable(scope_t *scope, int8_t *name, namespace_t *namespace);
 hyperValue_t getFrameVariableLocation(heapValue_t *frame, int32_t index);
 
 // VARIABLE_HEADER_FILE

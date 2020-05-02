@@ -44,8 +44,8 @@ numberConstant_t *findNumberConstantByName(int8_t *name) {
     return NULL;
 }
 
-scopeVariable_t *resolveIdentifierInScope(scope_t *scope, int8_t *identifier) {
-    scopeVariable_t *tempVariable = scopeFindVariable(scope, identifier);
+baseScopeVariable_t *resolveIdentifierInScope(scope_t *scope, int8_t *identifier) {
+    baseScopeVariable_t *tempVariable = scopeFindVariable(scope, identifier, NULL);
     if (tempVariable != NULL) {
         return tempVariable;
     }
@@ -56,7 +56,7 @@ scopeVariable_t *resolveIdentifierInScope(scope_t *scope, int8_t *identifier) {
     if (tempVariable == NULL) {
         return NULL;
     }
-    return scopeAddVariable(scope, identifier, tempVariable->scopeIndex, true);
+    return scopeAddParentVariable(scope, identifier, tempVariable->scopeIndex);
 }
 
 baseExpression_t *resolveIdentifierExpression(
@@ -64,7 +64,7 @@ baseExpression_t *resolveIdentifierExpression(
     identifierExpression_t *identifierExpression
 ) {
     int8_t *tempName = identifierExpression->name;
-    scopeVariable_t *tempVariable = resolveIdentifierInScope(scope, tempName);
+    baseScopeVariable_t *tempVariable = resolveIdentifierInScope(scope, tempName);
     if (tempVariable != NULL) {
         return createVariableExpression(tempVariable);
     }

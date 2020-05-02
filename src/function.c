@@ -364,15 +364,16 @@ heapValue_t *createFunctionHandle(heapValue_t *frame, customFunction_t *customFu
     int32_t scopeIndex = 0;
     int32_t locationIndex = 0;
     while (scopeIndex < tempScope->variableList.length && locationIndex < tempLength) {
-        scopeVariable_t *tempVariable;
+        baseScopeVariable_t *tempVariable;
         getVectorElement(&tempVariable, &(tempScope->variableList), scopeIndex);
         scopeIndex += 1;
-        if (tempVariable->parentScopeIndex < 0) {
+        if (tempVariable->type != SCOPE_VARIABLE_TYPE_PARENT) {
             continue;
         }
+        parentScopeVariable_t *parentScopeVariable = (parentScopeVariable_t *)tempVariable;
         hyperValue_t tempLocation = getFrameVariableLocation(
             frame,
-            tempVariable->parentScopeIndex
+            parentScopeVariable->parentScopeIndex
         );
         tempLocationArray[locationIndex] = tempLocation;
         addHyperValueReference(&tempLocation);
@@ -397,9 +398,9 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
     int32_t scopeIndex = 0;
     int32_t locationIndex = 0;
     while (scopeIndex < tempLength) {
-        scopeVariable_t *scopeVariable;
+        baseScopeVariable_t *scopeVariable;
         getVectorElement(&scopeVariable, &(tempScope->variableList), scopeIndex);
-        if (scopeVariable->parentScopeIndex >= 0) {
+        if (scopeVariable->type == SCOPE_VARIABLE_TYPE_PARENT) {
             hyperValue_t *tempLocation = tempLocationArray + locationIndex;
             swapHyperValueReference(tempValueArray + scopeIndex, tempLocation);
             locationIndex += 1;
