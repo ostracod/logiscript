@@ -10,6 +10,7 @@
 #include "operator.h"
 #include "value.h"
 #include "error.h"
+#include "script.h"
 
 int32_t markAndSweepDelay = 0;
 
@@ -221,8 +222,6 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                 true
             );
         }
-        // TODO: Evaluate other types of expressions.
-        
         default:
         {
             break;
@@ -245,18 +244,103 @@ value_t evaluateAndResolveExpression(heapValue_t *frame, baseExpression_t *expre
     return output;
 }
 
-void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
-    if (statement->type == STATEMENT_TYPE_INVOCATION) {
-        invocationStatement_t *invocationStatement = (invocationStatement_t *)statement;
-        invokeFunctionWithExpressions(
-            frame,
-            invocationStatement->function,
-            &(invocationStatement->argumentList),
-            false
-        );
+script_t *importScriptWithExpression(heapValue_t *frame, baseExpression_t *pathExpression) {
+    value_t pathValue = evaluateAndResolveExpression(frame, pathExpression);
+    if (hasThrownError) {
+        return NULL;
     }
-    // TODO: Evaluate other types of statements.
-    
+    if (pathValue.type != VALUE_TYPE_STRING) {
+        THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected string value.");
+        return NULL;
+    }
+    vector_t *tempText = &(pathValue.heapValue->vector);
+    int8_t *tempPath = malloc(tempText->length);
+    memcpy(tempPath, tempText->data, tempText->length);
+    return importScript(tempPath);
+}
+
+void populateImportVariables(
+    script_t *destinationScript,
+    vector_t *variableList,
+    script_t *sourceScript
+) {
+    scope_t *sourceScope = &(sourceScript->topLevelFunction->scope);
+    heapValue_t *sourceFrame = sourceScript->globalFrame;
+    heapValue_t *destinationFrame = destinationScript->globalFrame;
+    for (int32_t index = 0; index < variableList->length; index++) {
+        baseScopeVariable_t *destinationVariable;
+        getVectorElement(&destinationVariable, variableList, index);
+        int8_t *tempName = destinationVariable->name;
+        baseScopeVariable_t *sourceVariable = scopeFindVariable(sourceScope, tempName, NULL);
+        if (sourceVariable == NULL) {
+            THROW_BUILT_IN_ERROR(
+                PARSE_ERROR_CONSTANT,
+                "Could not find \"%s\" in imported script.",
+                tempName
+            );
+            return;
+        }
+        hyperValue_t tempValue = getFrameVariableLocation(
+            sourceFrame,
+            sourceVariable->scopeIndex
+        );
+        hyperValue_t *tempValueArray = destinationFrame->frameVariableList.valueArray;
+        swapHyperValueReference(tempValueArray + destinationVariable->scopeIndex, &tempValue);
+    }
+}
+
+void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
+    switch(statement->type) {
+        case STATEMENT_TYPE_INVOCATION:
+        {
+            invocationStatement_t *invocationStatement = (invocationStatement_t *)statement;
+            invokeFunctionWithExpressions(
+                frame,
+                invocationStatement->function,
+                &(invocationStatement->argumentList),
+                false
+            );
+            break;
+        }
+        case STATEMENT_TYPE_VARIABLE_IMPORT:
+        {
+            variableImportStatement_t *importStatement = (variableImportStatement_t *)statement;
+            script_t *tempScript = importScriptWithExpression(
+                frame,
+                importStatement->base.path
+            );
+            if (hasThrownError) {
+                return;
+            }
+            populateImportVariables(
+                statement->bodyPos.script,
+                &(importStatement->variableList),
+                tempScript
+            );
+            break;
+        }
+        case STATEMENT_TYPE_NAMESPACE_IMPORT:
+        {
+            namespaceImportStatement_t *importStatement = (namespaceImportStatement_t *)statement;
+            script_t *tempScript = importScriptWithExpression(
+                frame,
+                importStatement->base.path
+            );
+            if (hasThrownError) {
+                return;
+            }
+            populateImportVariables(
+                statement->bodyPos.script,
+                &(importStatement->namespace->variableList),
+                tempScript
+            );
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
     markAndSweepDelay += 1;
     if (markAndSweepDelay > 10000) {
         markAndSweepHeapValues();
@@ -269,7 +353,7 @@ void evaluateScript(script_t *script) {
         NULL,
         script->topLevelFunction
     );
-    script->globalFrame = invokeFunctionHandle(tempHandle, NULL);
+    invokeFunctionHandle(&(script->globalFrame), tempHandle, NULL);
 }
 
 

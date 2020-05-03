@@ -23,11 +23,27 @@ void cleanUpScript(script_t *script) {
     free(script);
 }
 
+script_t *findScriptByPath(int8_t *path) {
+    for (int32_t index = 0; index < scriptList.length; index++) {
+        script_t *tempScript;
+        getVectorElement(&tempScript, &scriptList, index);
+        if (strcmp((char *)path, (char *)(tempScript->path)) == 0) {
+            return tempScript;
+        }
+    }
+    return NULL;
+}
+
 script_t *importScript(int8_t *path) {
-    hasThrownError = false;
-    script_t *output = malloc(sizeof(script_t));
+    int8_t *tempPath = mallocRealpath(path);
+    script_t *output = findScriptByPath(tempPath);
+    if (output != NULL) {
+        free(tempPath);
+        return output;
+    }
+    output = malloc(sizeof(script_t));
     output->body = NULL;
-    output->path = mallocRealpath(path);
+    output->path = tempPath;
     if (output->path == NULL) {
         THROW_BUILT_IN_ERROR(
             STATE_ERROR_CONSTANT,
@@ -75,6 +91,7 @@ script_t *importScript(int8_t *path) {
     if (hasThrownError) {
         return NULL;
     }
+    pushVectorElement(&scriptList, &output);
     return output;
 }
 

@@ -19,6 +19,8 @@ typedef struct script {
 #include "function.h"
 #include "value.h"
 
+vector_t scriptList; // Vector of pointers to script_t.
+
 script_t *importScript(int8_t *path);
 namespace_t *scriptFindNamespace(script_t *script, int8_t *name);
 

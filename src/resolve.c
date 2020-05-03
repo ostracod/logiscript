@@ -168,6 +168,8 @@ void resolveIdentifiersInExpression(
         {
             binaryExpression_t *binaryExpression = (binaryExpression_t *)tempExpression;
             if (binaryExpression->operator->number == OPERATOR_NAMESPACE) {
+                // TODO: Fix this so that it works with nested function definitions.
+                // We really should be imploying parent variables here.
                 baseExpression_t *tempResult = resolveNamespaceExpression(
                     scope,
                     binaryExpression

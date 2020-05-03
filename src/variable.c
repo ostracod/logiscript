@@ -127,6 +127,8 @@ hyperValue_t getFrameVariableLocation(heapValue_t *frame, int32_t index) {
         output.alias.index = index;
         return output;
     } else {
+        // TODO: This should throw an error for variables
+        // which have not yet been imported.
         return tempValue;
     }
 }

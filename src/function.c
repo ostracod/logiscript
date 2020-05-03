@@ -416,6 +416,11 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
             hyperValue_t *tempLocation = tempLocationArray + locationIndex;
             swapHyperValueReference(tempValueArray + scopeIndex, tempLocation);
             locationIndex += 1;
+        } else if (scopeVariable->type == SCOPE_VARIABLE_TYPE_IMPORT) {
+            hyperValue_t tempValue;
+            tempValue.type = HYPER_VALUE_TYPE_ALIAS;
+            tempValue.alias.container = NULL;
+            swapHyperValueReference(tempValueArray + scopeIndex, &tempValue);
         }
         scopeIndex += 1;
     }
@@ -425,8 +430,10 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
     return output;
 }
 
-// Output will be locked.
-heapValue_t *invokeFunctionHandle(
+// If frameDestination is null, then no frame will be stored.
+// If frameDestination not null, the frame will be locked.
+void invokeFunctionHandle(
+    heapValue_t **frameDestination,
     heapValue_t *functionHandle,
     hyperValueList_t *argumentList
 ) {
@@ -434,9 +441,12 @@ heapValue_t *invokeFunctionHandle(
     customFunction_t *customFunction = tempHandle->function;
     checkInvocationArgumentList(&(customFunction->base), &argumentList);
     if (hasThrownError) {
-        return NULL;
+        return;
     }
     heapValue_t *tempFrame = functionHandleCreateFrame(tempHandle);
+    if (frameDestination != NULL) {
+        *frameDestination = tempFrame;
+    }
     lockHeapValue(tempFrame);
     for (int32_t index = 0; index < argumentList->length; index++) {
         swapHyperValueReference(
@@ -453,7 +463,9 @@ heapValue_t *invokeFunctionHandle(
             break;
         }
     }
-    return tempFrame;
+    if (frameDestination == NULL) {
+        unlockHeapValue(tempFrame);
+    }
 }
 
 // Output will be locked.
@@ -477,8 +489,9 @@ hyperValue_t invokeFunction(
         return output;
     }
     if (functionValue.type == VALUE_TYPE_CUSTOM_FUNCTION) {
-        heapValue_t *tempFrame = invokeFunctionHandle(functionValue.heapValue, argumentList);
-        if (hasDestinationArgument) {
+        heapValue_t *tempFrame;
+        invokeFunctionHandle(&tempFrame, functionValue.heapValue, argumentList);
+        if (hasDestinationArgument && !hasThrownError) {
             output = getFrameVariableLocation(tempFrame, 0);
             lockHyperValue(&output);
         }
