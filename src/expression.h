@@ -15,8 +15,11 @@
 #define EXPRESSION_TYPE_INDEX 8
 #define EXPRESSION_TYPE_INVOCATION 9
 
+typedef struct script script_t;
+
 typedef struct baseExpression {
     int8_t type;
+    script_t *script;
 } baseExpression_t;
 
 typedef struct constantExpression {

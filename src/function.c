@@ -416,7 +416,8 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
             hyperValue_t *tempLocation = tempLocationArray + locationIndex;
             swapHyperValueReference(tempValueArray + scopeIndex, tempLocation);
             locationIndex += 1;
-        } else if (scopeVariable->type == SCOPE_VARIABLE_TYPE_IMPORT) {
+        } else if (scopeVariable->type == SCOPE_VARIABLE_TYPE_IMPORT
+                || scopeVariable->type == SCOPE_VARIABLE_TYPE_NAMESPACE) {
             hyperValue_t tempValue;
             tempValue.type = HYPER_VALUE_TYPE_ALIAS;
             tempValue.alias.container = NULL;

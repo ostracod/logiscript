@@ -126,11 +126,15 @@ hyperValue_t getFrameVariableLocation(heapValue_t *frame, int32_t index) {
         output.alias.container = frame;
         output.alias.index = index;
         return output;
-    } else {
-        // TODO: This should throw an error for variables
-        // which have not yet been imported.
-        return tempValue;
+    } else if (tempValue.type == HYPER_VALUE_TYPE_ALIAS
+            && tempValue.alias.container == NULL) {
+        THROW_BUILT_IN_ERROR(STATE_ERROR_CONSTANT, "Variable has not yet been imported.");
+        hyperValue_t output;
+        output.type = HYPER_VALUE_TYPE_VALUE;
+        output.value.type = VALUE_TYPE_VOID;
+        return output;
     }
+    return tempValue;
 }
 
 

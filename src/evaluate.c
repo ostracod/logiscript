@@ -137,8 +137,16 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
         case EXPRESSION_TYPE_VARIABLE:
         {
             variableExpression_t *variableExpression = (variableExpression_t *)expression;
-            int32_t tempScopeIndex = variableExpression->variable->scopeIndex;
-            output = getFrameVariableLocation(frame, tempScopeIndex);
+            baseScopeVariable_t *tempVariable = variableExpression->variable;
+            int32_t tempScopeIndex = tempVariable->scopeIndex;
+            heapValue_t *tempFrame;
+            if (tempVariable->type == SCOPE_VARIABLE_TYPE_IMPORT
+                    || tempVariable->type == SCOPE_VARIABLE_TYPE_NAMESPACE) {
+                tempFrame = expression->script->globalFrame;
+            } else {
+                tempFrame = frame;
+            }
+            output = getFrameVariableLocation(tempFrame, tempScopeIndex);
             break;
         }
         case EXPRESSION_TYPE_UNARY:
@@ -251,11 +259,13 @@ script_t *importScriptWithExpression(heapValue_t *frame, baseExpression_t *pathE
     }
     if (pathValue.type != VALUE_TYPE_STRING) {
         THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected string value.");
+        unlockValue(&pathValue);
         return NULL;
     }
     vector_t *tempText = &(pathValue.heapValue->vector);
     int8_t *tempPath = malloc(tempText->length);
     memcpy(tempPath, tempText->data, tempText->length);
+    unlockValue(&pathValue);
     return importScript(tempPath);
 }
 
@@ -284,6 +294,9 @@ void populateImportVariables(
             sourceFrame,
             sourceVariable->scopeIndex
         );
+        if (hasThrownError) {
+            return;
+        }
         hyperValue_t *tempValueArray = destinationFrame->frameVariableList.valueArray;
         swapHyperValueReference(tempValueArray + destinationVariable->scopeIndex, &tempValue);
     }

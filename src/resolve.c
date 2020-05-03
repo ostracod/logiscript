@@ -56,6 +56,11 @@ baseScopeVariable_t *resolveIdentifierInScope(scope_t *scope, int8_t *identifier
     if (tempVariable == NULL) {
         return NULL;
     }
+    if (tempVariable->type == SCOPE_VARIABLE_TYPE_IMPORT) {
+        // Do not create parent variables for imported variables.
+        // Imported variables are always global.
+        return tempVariable;
+    }
     return scopeAddParentVariable(scope, identifier, tempVariable->scopeIndex);
 }
 
@@ -168,8 +173,6 @@ void resolveIdentifiersInExpression(
         {
             binaryExpression_t *binaryExpression = (binaryExpression_t *)tempExpression;
             if (binaryExpression->operator->number == OPERATOR_NAMESPACE) {
-                // TODO: Fix this so that it works with nested function definitions.
-                // We really should be imploying parent variables here.
                 baseExpression_t *tempResult = resolveNamespaceExpression(
                     scope,
                     binaryExpression
@@ -227,6 +230,7 @@ void resolveIdentifiersInExpression(
             break;
         }
     }
+    (*expression)->script = scope->script;
 }
 
 void resolveIdentifiersInStatement(scope_t *scope, baseStatement_t *statement) {
