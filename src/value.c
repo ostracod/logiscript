@@ -340,6 +340,9 @@ void markValue(value_t *value) {
 
 void markHyperValue(hyperValue_t *hyperValue) {
     if (hyperValue->type == HYPER_VALUE_TYPE_ALIAS) {
+        if (hyperValue->alias.container == NULL) {
+            return;
+        }
         markHeapValue(hyperValue->alias.container, HEAP_VALUE_MARK_WEAK);
         value_t tempValue = readValueFromAlias(hyperValue->alias, false);
         markValue(&tempValue);
@@ -507,6 +510,12 @@ value_t readValueFromAlias(alias_t alias, int8_t shouldThrowError) {
     value_t output;
     output.type = VALUE_TYPE_VOID;
     heapValue_t *heapValue = alias.container;
+    if (heapValue == NULL) {
+        if (shouldThrowError) {
+            THROW_BUILT_IN_ERROR(STATE_ERROR_CONSTANT, "Variable has not yet been imported.");
+        }
+        return output;
+    }
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
         hyperValue_t *tempValue = heapValue->frameVariableList.valueArray + index;
@@ -543,6 +552,10 @@ value_t readValueFromAlias(alias_t alias, int8_t shouldThrowError) {
 
 void writeValueToAlias(alias_t alias, value_t value) {
     heapValue_t *heapValue = alias.container;
+    if (heapValue == NULL) {
+        THROW_BUILT_IN_ERROR(STATE_ERROR_CONSTANT, "Variable has not yet been imported.");
+        return;
+    }
     int32_t index = (int32_t)(alias.index);
     if (heapValue->type == VALUE_TYPE_FRAME) {
         hyperValue_t *tempValue = heapValue->frameVariableList.valueArray + index;

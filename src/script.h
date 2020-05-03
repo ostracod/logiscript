@@ -5,6 +5,7 @@
 #include "parse.h"
 #include "function.h"
 #include "value.h"
+#include "variable.h"
 
 typedef struct script {
     int8_t *path;
@@ -16,6 +17,7 @@ typedef struct script {
 } script_t;
 
 script_t *importScript(int8_t *path);
+namespace_t *scriptFindNamespace(script_t *script, int8_t *name);
 
 // SCRIPT_HEADER_FILE
 #endif

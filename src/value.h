@@ -39,6 +39,8 @@ typedef struct value {
 
 // Note: Aliases cannot reference other aliases.
 typedef struct alias {
+    // For import variables, container will be null until the
+    // corresponding import statement has been evaluated.
     heapValue_t *container;
     int64_t index;
 } alias_t;

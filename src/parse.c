@@ -504,20 +504,82 @@ baseStatement_t *parseStatement(int8_t *hasReachedEnd, parser_t *parser) {
         *hasReachedEnd = !bodyPosSeekNextLine(bodyPos);
         return NULL;
     }
-    // TODO: Parse import statements.
-    
-    invocationStatement_t *output = malloc(sizeof(invocationStatement_t));
-    output->base.type = STATEMENT_TYPE_INVOCATION;
-    output->base.bodyPos = startBodyPos;
-    output->function = parseExpression(parser, 3);
-    if (hasThrownError) {
-        return NULL;
+    baseStatement_t *output;
+    if (tempCharacter == '$') {
+        bodyPos->index += 1;
+        bodyPosSkipWhitespace(bodyPos);
+        int8_t tempCharacter = bodyPosGetCharacter(bodyPos);
+        if (tempCharacter == '(') {
+            bodyPos->index += 1;
+            output = malloc(sizeof(variableImportStatement_t));
+            output->type = STATEMENT_TYPE_VARIABLE_IMPORT;
+            variableImportStatement_t *variableImportStatement = (variableImportStatement_t *)output;
+            createEmptyVector(
+                &(variableImportStatement->variableList),
+                sizeof(baseScopeVariable_t *)
+            );
+            vector_t tempIdentifierList;
+            parseIdentifierList(&tempIdentifierList, parser, ')');
+            if (hasThrownError) {
+                return NULL;
+            }
+            for (int32_t index = 0; index < tempIdentifierList.length; index++) {
+                int8_t *tempIdentifier;
+                getVectorElement(&tempIdentifier, &tempIdentifierList, index);
+                baseScopeVariable_t *tempVariable = scopeAddImportVariable(
+                    &(parser->script->topLevelFunction->scope),
+                    tempIdentifier
+                );
+                if (hasThrownError) {
+                    return NULL;
+                }
+                pushVectorElement(&(variableImportStatement->variableList), &tempVariable);
+            }
+            cleanUpVector(&tempIdentifierList);
+        } else {
+            output = malloc(sizeof(namespaceImportStatement_t));
+            output->type = STATEMENT_TYPE_NAMESPACE_IMPORT;
+            namespaceImportStatement_t *namespaceImportStatement = (namespaceImportStatement_t *)output;
+            namespace_t *tempNamespace = malloc(sizeof(namespace_t));
+            tempNamespace->name = parseIdentifier(parser);
+            if (hasThrownError) {
+                return NULL;
+            }
+            createEmptyVector(
+                &(tempNamespace->variableList),
+                sizeof(namespaceScopeVariable_t *)
+            );
+            namespaceImportStatement->namespace = tempNamespace;
+            namespace_t *oldNamespace = scriptFindNamespace(
+                parser->script,
+                tempNamespace->name
+            );
+            if (oldNamespace != NULL) {
+                THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Duplicate namespace name.");
+                return NULL;
+            }
+            pushVectorElement(&(parser->script->namespaceList), &tempNamespace);
+        }
+        baseImportStatement_t *importStatement = (baseImportStatement_t *)output;
+        importStatement->path = parseExpression(parser, 99);
+        if (hasThrownError) {
+            return NULL;
+        }
+    } else {
+        output = malloc(sizeof(invocationStatement_t));
+        output->type = STATEMENT_TYPE_INVOCATION;
+        invocationStatement_t *invocationStatement = (invocationStatement_t *)output;
+        invocationStatement->function = parseExpression(parser, 3);
+        if (hasThrownError) {
+            return NULL;
+        }
+        bodyPosSkipWhitespace(bodyPos);
+        parseExpressionList(&(invocationStatement->argumentList), parser, -1);
+        if (hasThrownError) {
+            return NULL;
+        }
     }
-    bodyPosSkipWhitespace(bodyPos);
-    parseExpressionList(&(output->argumentList), parser, -1);
-    if (hasThrownError) {
-        return NULL;
-    }
+    output->bodyPos = startBodyPos;
     *hasReachedEnd = !bodyPosSeekNextLine(bodyPos);
     return (baseStatement_t *)output;
 }

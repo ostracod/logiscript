@@ -6,6 +6,7 @@
 #define SCOPE_VARIABLE_TYPE_LOCAL 2
 #define SCOPE_VARIABLE_TYPE_PARENT 3
 #define SCOPE_VARIABLE_TYPE_IMPORT 4
+#define SCOPE_VARIABLE_TYPE_NAMESPACE 5
 
 #include "vector.h"
 #include "value.h"
@@ -23,10 +24,10 @@ typedef struct parentScopeVariable {
 
 typedef struct namespace namespace_t;
 
-typedef struct importScopeVariable {
+typedef struct namespaceScopeVariable {
     baseScopeVariable_t base;
     namespace_t *namespace;
-} importScopeVariable_t;
+} namespaceScopeVariable_t;
 
 typedef struct scope scope_t;
 
@@ -41,7 +42,7 @@ typedef struct scope {
 
 typedef struct namespace {
     int8_t *name;
-    vector_t variableList; // Vector of pointers to importScopeVariable_t.
+    vector_t variableList; // Vector of pointers to namespaceScopeVariable_t.
 } namespace_t;
 
 baseScopeVariable_t *scopeAddArgumentVariable(scope_t *scope, int8_t *name);
@@ -51,7 +52,8 @@ baseScopeVariable_t *scopeAddParentVariable(
     int8_t *name,
     int32_t parentScopeIndex
 );
-baseScopeVariable_t *scopeAddImportVariable(
+baseScopeVariable_t *scopeAddImportVariable(scope_t *scope, int8_t *name);
+baseScopeVariable_t *scopeAddNamespaceVariable(
     scope_t *scope,
     int8_t *name,
     namespace_t *namespace

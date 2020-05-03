@@ -84,4 +84,15 @@ script_t *importScript(int8_t *path) {
     return output;
 }
 
+namespace_t *scriptFindNamespace(script_t *script, int8_t *name) {
+    for (int32_t index = 0; index < script->namespaceList.length; index++) {
+        namespace_t *tempNamespace;
+        getVectorElement(&tempNamespace, &(script->namespaceList), index);
+        if (strcmp((char *)name, (char *)(tempNamespace->name)) == 0) {
+            return tempNamespace;
+        }
+    }
+    return NULL;
+}
+
 

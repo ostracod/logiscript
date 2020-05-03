@@ -34,7 +34,7 @@ typedef struct namespaceImportStatement {
 
 typedef struct variableImportStatement {
     baseImportStatement_t base;
-    vector_t variableList; // Vector of pointers to importScopeVariable_t.
+    vector_t variableList; // Vector of pointers to baseScopeVariable_t.
 } variableImportStatement_t;
 
 // STATEMENT_HEADER_FILE

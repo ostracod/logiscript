@@ -9,7 +9,7 @@
 #include "error.h"
 
 int8_t scopeVariableTypeAllowsDuplicates(int8_t type) {
-    return (type == SCOPE_VARIABLE_TYPE_LOCAL || type == SCOPE_VARIABLE_TYPE_PARENT);
+    return (type != SCOPE_VARIABLE_TYPE_ARGUMENT && type != SCOPE_VARIABLE_TYPE_IMPORT);
 }
 
 baseScopeVariable_t *scopeAddVariableHelper(
@@ -40,24 +40,16 @@ baseScopeVariable_t *scopeAddVariableHelper(
     return output;
 }
 
+baseScopeVariable_t *scopeAddBaseVariable(scope_t *scope, int8_t *name, int8_t type) {
+    return scopeAddVariableHelper(scope, name, NULL, type, sizeof(baseScopeVariable_t));
+}
+
 baseScopeVariable_t *scopeAddArgumentVariable(scope_t *scope, int8_t *name) {
-    return scopeAddVariableHelper(
-        scope,
-        name,
-        NULL,
-        SCOPE_VARIABLE_TYPE_ARGUMENT,
-        sizeof(baseScopeVariable_t)
-    );
+    return scopeAddBaseVariable(scope, name, SCOPE_VARIABLE_TYPE_ARGUMENT);
 }
 
 baseScopeVariable_t *scopeAddLocalVariable(scope_t *scope, int8_t *name) {
-    return scopeAddVariableHelper(
-        scope,
-        name,
-        NULL,
-        SCOPE_VARIABLE_TYPE_LOCAL,
-        sizeof(baseScopeVariable_t)
-    );
+    return scopeAddBaseVariable(scope, name, SCOPE_VARIABLE_TYPE_LOCAL);
 }
 
 baseScopeVariable_t *scopeAddParentVariable(
@@ -80,17 +72,21 @@ baseScopeVariable_t *scopeAddParentVariable(
     return (baseScopeVariable_t *)output;
 }
 
-baseScopeVariable_t *scopeAddImportVariable(
+baseScopeVariable_t *scopeAddImportVariable(scope_t *scope, int8_t *name) {
+    return scopeAddBaseVariable(scope, name, SCOPE_VARIABLE_TYPE_IMPORT);
+}
+
+baseScopeVariable_t *scopeAddNamespaceVariable(
     scope_t *scope,
     int8_t *name,
     namespace_t *namespace
 ) {
-    importScopeVariable_t *output = (importScopeVariable_t *)scopeAddVariableHelper(
+    namespaceScopeVariable_t *output = (namespaceScopeVariable_t *)scopeAddVariableHelper(
         scope,
         name,
         namespace,
-        SCOPE_VARIABLE_TYPE_IMPORT,
-        sizeof(importScopeVariable_t)
+        SCOPE_VARIABLE_TYPE_NAMESPACE,
+        sizeof(namespaceScopeVariable_t)
     );
     if (hasThrownError) {
         return NULL;
@@ -103,9 +99,9 @@ baseScopeVariable_t *scopeAddImportVariable(
 }
 
 namespace_t *getScopeVariableNamespace(baseScopeVariable_t *variable) {
-    if (variable->type == SCOPE_VARIABLE_TYPE_IMPORT) {
-        importScopeVariable_t *importScopeVariable = (importScopeVariable_t *)variable;
-        return importScopeVariable->namespace;
+    if (variable->type == SCOPE_VARIABLE_TYPE_NAMESPACE) {
+        namespaceScopeVariable_t *namespaceScopeVariable = (namespaceScopeVariable_t *)variable;
+        return namespaceScopeVariable->namespace;
     }
     return NULL;
 }
