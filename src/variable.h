@@ -8,9 +8,6 @@
 #define SCOPE_VARIABLE_TYPE_IMPORT 4
 #define SCOPE_VARIABLE_TYPE_NAMESPACE 5
 
-#include "vector.h"
-#include "value.h"
-
 typedef struct baseScopeVariable {
     int8_t type;
     int8_t *name;
@@ -30,8 +27,10 @@ typedef struct namespaceScopeVariable {
 } namespaceScopeVariable_t;
 
 typedef struct scope scope_t;
+typedef struct script script_t;
 
 typedef struct scope {
+    script_t *script;
     scope_t *parentScope;
     int32_t parentVariableAmount;
     // Function argument variables will preceed any other
@@ -44,6 +43,10 @@ typedef struct namespace {
     int8_t *name;
     vector_t variableList; // Vector of pointers to namespaceScopeVariable_t.
 } namespace_t;
+
+#include "vector.h"
+#include "value.h"
+#include "script.h"
 
 baseScopeVariable_t *scopeAddArgumentVariable(scope_t *scope, int8_t *name);
 baseScopeVariable_t *scopeAddLocalVariable(scope_t *scope, int8_t *name);

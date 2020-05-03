@@ -87,14 +87,43 @@ baseExpression_t *resolveIdentifierExpression(
         tempValue.type = VALUE_TYPE_VOID;
         return createConstantExpression(tempValue);
     }
-    // TODO: Resolve other types of identifiers.
-    
     THROW_BUILT_IN_ERROR(
         PARSE_ERROR_CONSTANT,
         "Unknown identifier \"%s\".",
         tempName
     );
     return NULL;
+}
+
+baseExpression_t *resolveNamespaceExpression(
+    scope_t *scope,
+    binaryExpression_t *binaryExpression
+) {
+    if (binaryExpression->operand1->type != EXPRESSION_TYPE_IDENTIFIER
+            || binaryExpression->operand2->type != EXPRESSION_TYPE_IDENTIFIER) {
+        THROW_BUILT_IN_ERROR(PARSE_ERROR_CONSTANT, "Expected identifier.");
+        return NULL;
+    }
+    identifierExpression_t *operand1 = (identifierExpression_t *)(binaryExpression->operand1);
+    identifierExpression_t *operand2 = (identifierExpression_t *)(binaryExpression->operand2);
+    int8_t *namespaceName = operand1->name;
+    int8_t *variableName = operand2->name;
+    script_t *tempScript = scope->script;
+    namespace_t *tempNamespace = scriptFindNamespace(tempScript, namespaceName);
+    if (tempNamespace == NULL) {
+        THROW_BUILT_IN_ERROR(
+            PARSE_ERROR_CONSTANT,
+            "Unknown namespace \"%s\".",
+            namespaceName
+        );
+        return NULL;
+    }
+    baseScopeVariable_t *tempVariable = scopeAddNamespaceVariable(
+        &(tempScript->topLevelFunction->scope),
+        variableName,
+        tempNamespace
+    );
+    return createVariableExpression(tempVariable);
 }
 
 void resolveIdentifiersInExpression(
@@ -138,11 +167,21 @@ void resolveIdentifiersInExpression(
         case EXPRESSION_TYPE_BINARY:
         {
             binaryExpression_t *binaryExpression = (binaryExpression_t *)tempExpression;
-            resolveIdentifiersInExpression(scope, &(binaryExpression->operand1));
-            if (hasThrownError) {
-                return;
+            if (binaryExpression->operator->number == OPERATOR_NAMESPACE) {
+                baseExpression_t *tempResult = resolveNamespaceExpression(
+                    scope,
+                    binaryExpression
+                );
+                if (tempResult != NULL) {
+                    *expression = tempResult;
+                }
+            } else {
+                resolveIdentifiersInExpression(scope, &(binaryExpression->operand1));
+                if (hasThrownError) {
+                    return;
+                }
+                resolveIdentifiersInExpression(scope, &(binaryExpression->operand2));
             }
-            resolveIdentifiersInExpression(scope, &(binaryExpression->operand2));
             break;
         }
         case EXPRESSION_TYPE_FUNCTION:
@@ -189,25 +228,38 @@ void resolveIdentifiersInExpression(
 }
 
 void resolveIdentifiersInStatement(scope_t *scope, baseStatement_t *statement) {
-    if (statement->type == STATEMENT_TYPE_INVOCATION) {
-        invocationStatement_t *invocationStatement = (invocationStatement_t *)statement;
-        resolveIdentifiersInExpression(scope, &(invocationStatement->function));
-        if (hasThrownError) {
-            return;
-        }
-        for (int32_t index = 0; index < invocationStatement->argumentList.length; index++) {
-            baseExpression_t **tempExpression = findVectorElement(
-                &(invocationStatement->argumentList),
-                index
-            );
-            resolveIdentifiersInExpression(scope, tempExpression);
+    switch(statement->type) {
+        case STATEMENT_TYPE_INVOCATION:
+        {
+            invocationStatement_t *invocationStatement = (invocationStatement_t *)statement;
+            resolveIdentifiersInExpression(scope, &(invocationStatement->function));
             if (hasThrownError) {
                 return;
             }
+            for (int32_t index = 0; index < invocationStatement->argumentList.length; index++) {
+                baseExpression_t **tempExpression = findVectorElement(
+                    &(invocationStatement->argumentList),
+                    index
+                );
+                resolveIdentifiersInExpression(scope, tempExpression);
+                if (hasThrownError) {
+                    return;
+                }
+            }
+            break;
+        }
+        case STATEMENT_TYPE_NAMESPACE_IMPORT:
+        case STATEMENT_TYPE_VARIABLE_IMPORT:
+        {
+            baseImportStatement_t *importStatement = (baseImportStatement_t *)statement;
+            resolveIdentifiersInExpression(scope, &(importStatement->path));
+            break;
+        }
+        default:
+        {
+            break;
         }
     }
-    // TODO: Resolve identifiers in other statement types.
-    
 }
 
 void resolveIdentifiersInFunction(customFunction_t *function) {

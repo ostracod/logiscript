@@ -2,9 +2,6 @@
 #ifndef ERROR_HEADER_FILE
 #define ERROR_HEADER_FILE
 
-#include "value.h"
-#include "parse.h"
-
 #define ERROR_CHANNEL_CONSTANT 0
 
 #define PARSE_ERROR_CONSTANT 0
@@ -26,6 +23,9 @@ typedef struct errorConstant {
     int8_t *name;
     int32_t code;
 } errorConstant_t;
+
+#include "value.h"
+#include "parse.h"
 
 int8_t hasThrownError;
 int32_t thrownErrorChannel;

@@ -2,10 +2,10 @@
 #ifndef SCRIPT_HEADER_FILE
 #define SCRIPT_HEADER_FILE
 
-#include "parse.h"
-#include "function.h"
-#include "value.h"
-#include "variable.h"
+#include "vector.h"
+
+typedef struct customFunction customFunction_t;
+typedef struct heapValue heapValue_t;
 
 typedef struct script {
     int8_t *path;
@@ -15,6 +15,9 @@ typedef struct script {
     heapValue_t *globalFrame;
     vector_t namespaceList; // Vector of pointers to namespace_t.
 } script_t;
+
+#include "function.h"
+#include "value.h"
 
 script_t *importScript(int8_t *path);
 namespace_t *scriptFindNamespace(script_t *script, int8_t *name);

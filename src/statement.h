@@ -3,9 +3,7 @@
 #define STATEMENT_HEADER_FILE
 
 #include "vector.h"
-#include "script.h"
 #include "parse.h"
-#include "expression.h"
 
 #define STATEMENT_TYPE_INVOCATION 1
 #define STATEMENT_TYPE_NAMESPACE_IMPORT 2
@@ -15,6 +13,8 @@ typedef struct baseStatement {
     int8_t type;
     bodyPos_t bodyPos;
 } baseStatement_t;
+
+typedef struct baseExpression baseExpression_t;
 
 typedef struct invocationStatement {
     baseStatement_t base;
@@ -27,6 +27,8 @@ typedef struct baseImportStatement {
     baseExpression_t *path;
 } baseImportStatement_t;
 
+typedef struct namespace namespace_t;
+
 typedef struct namespaceImportStatement {
     baseImportStatement_t base;
     namespace_t *namespace;
@@ -36,6 +38,10 @@ typedef struct variableImportStatement {
     baseImportStatement_t base;
     vector_t variableList; // Vector of pointers to baseScopeVariable_t.
 } variableImportStatement_t;
+
+#include "parse.h"
+#include "expression.h"
+#include "variable.h"
 
 // STATEMENT_HEADER_FILE
 #endif

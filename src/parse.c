@@ -256,17 +256,15 @@ baseExpression_t *parseCustomFunctionExpression(parser_t *parser) {
     }
     bodyPosSeekNextLine(parser->bodyPos);
     int32_t argumentAmount = (int32_t)(identifierList.length);
-    customFunction_t *customFunction = malloc(sizeof(customFunction_t));
-    customFunction->base.type = FUNCTION_TYPE_CUSTOM;
+    customFunction_t *customFunction = createEmptyCustomFunction(
+        parser->script,
+        &(lastCustomFunction->scope)
+    );
     customFunction->base.argumentAmount = argumentAmount;
-    scope_t *tempScope = &(customFunction->scope);
-    tempScope->parentScope = &(lastCustomFunction->scope);
-    tempScope->parentVariableAmount = 0;
-    createEmptyVector(&(tempScope->variableList), sizeof(baseScopeVariable_t *));
     for (int32_t index = 0; index < argumentAmount; index++) {
         int8_t *tempIdentifier;
         getVectorElement(&tempIdentifier, &identifierList, index);
-        scopeAddArgumentVariable(tempScope, tempIdentifier);
+        scopeAddArgumentVariable(&(customFunction->scope), tempIdentifier);
     }
     if (hasThrownError) {
         return NULL;

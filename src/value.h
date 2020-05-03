@@ -80,6 +80,9 @@ typedef struct heapValue {
     };
 } heapValue_t;
 
+#include "function.h"
+#include "variable.h"
+
 heapValue_t *createHeapValue(int8_t type);
 void deleteValueIfUnreferenced(value_t *value);
 void lockHeapValue(heapValue_t *heapValue);
@@ -108,9 +111,6 @@ void writeValueToAlias(alias_t alias, value_t value);
 value_t readValueFromHyperValue(hyperValue_t hyperValue);
 void writeValueToLocation(hyperValue_t location, value_t value);
 void printAllHeapValues();
-
-#include "function.h"
-#include "variable.h"
 
 // VALUE_HEADER_FILE
 #endif

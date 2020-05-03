@@ -48,13 +48,7 @@ script_t *importScript(int8_t *path) {
         return NULL;
     }
     
-    customFunction_t *topLevelFunction = malloc(sizeof(customFunction_t));
-    topLevelFunction->base.type = FUNCTION_TYPE_CUSTOM;
-    topLevelFunction->base.argumentAmount = 0;
-    scope_t *scope = &(topLevelFunction->scope);
-    scope->parentScope = NULL;
-    scope->parentVariableAmount = 0;
-    createEmptyVector(&(scope->variableList), sizeof(baseScopeVariable_t *));
+    customFunction_t *topLevelFunction = createEmptyCustomFunction(output, NULL);
     output->topLevelFunction = topLevelFunction;
     createEmptyVector(&(output->namespaceList), sizeof(namespace_t *));
     

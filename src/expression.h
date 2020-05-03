@@ -3,11 +3,7 @@
 #define EXPRESSION_HEADER_FILE
 
 #include "vector.h"
-#include "script.h"
 #include "value.h"
-#include "variable.h"
-#include "operator.h"
-#include "function.h"
 
 #define EXPRESSION_TYPE_CONSTANT 1
 #define EXPRESSION_TYPE_LIST 2
@@ -33,6 +29,8 @@ typedef struct listExpression {
     vector_t expressionList; // Vector of pointers to baseExpression_t.
 } listExpression_t;
 
+typedef struct customFunction customFunction_t;
+
 typedef struct customFunctionExpression {
     baseExpression_t base;
     customFunction_t *customFunction;
@@ -43,10 +41,14 @@ typedef struct identifierExpression {
     int8_t *name;
 } identifierExpression_t;
 
+typedef struct baseScopeVariable baseScopeVariable_t;
+
 typedef struct variableExpression {
     baseExpression_t base;
     baseScopeVariable_t *variable;
 } variableExpression_t;
+
+typedef struct operator operator_t;
 
 typedef struct unaryExpression {
     baseExpression_t base;
@@ -72,6 +74,11 @@ typedef struct invocationExpression {
     baseExpression_t *function;
     vector_t argumentList; // Vector of pointers to baseExpression_t.
 } invocationExpression_t;
+
+#include "script.h"
+#include "variable.h"
+#include "operator.h"
+#include "function.h"
 
 baseExpression_t *createIdentifierExpression(int8_t *name);
 baseExpression_t *createConstantExpression(value_t value);

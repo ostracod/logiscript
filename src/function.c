@@ -353,6 +353,18 @@ void invokeBuiltInFunction(
     }
 }
 
+customFunction_t *createEmptyCustomFunction(script_t *script, scope_t *parentScope) {
+    customFunction_t *output = malloc(sizeof(customFunction_t));
+    output->base.type = FUNCTION_TYPE_CUSTOM;
+    output->base.argumentAmount = 0;
+    scope_t *tempScope = &(output->scope);
+    tempScope->script = script;
+    tempScope->parentScope = parentScope;
+    tempScope->parentVariableAmount = 0;
+    createEmptyVector(&(tempScope->variableList), sizeof(baseScopeVariable_t *));
+    return output;
+}
+
 heapValue_t *createFunctionHandle(heapValue_t *frame, customFunction_t *customFunction) {
     customFunctionHandle_t *tempHandle = malloc(sizeof(customFunctionHandle_t));
     tempHandle->function = customFunction;
