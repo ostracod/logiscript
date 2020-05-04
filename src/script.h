@@ -8,6 +8,7 @@ typedef struct customFunction customFunction_t;
 typedef struct heapValue heapValue_t;
 
 typedef struct script {
+    int8_t *moduleDirectory;
     int8_t *path;
     int8_t *body;
     int64_t bodyLength;
@@ -21,7 +22,8 @@ typedef struct script {
 
 vector_t scriptList; // Vector of pointers to script_t.
 
-script_t *importScript(int8_t *path);
+script_t *importScript(int8_t *moduleDirectory, int8_t *scriptPath);
+void importEntryPointScript(int8_t *path);
 namespace_t *scriptFindNamespace(script_t *script, int8_t *name);
 
 // SCRIPT_HEADER_FILE

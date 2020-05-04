@@ -262,11 +262,11 @@ script_t *importScriptWithExpression(heapValue_t *frame, baseExpression_t *pathE
         unlockValue(&pathValue);
         return NULL;
     }
-    vector_t *tempText = &(pathValue.heapValue->vector);
-    int8_t *tempPath = malloc(tempText->length);
-    memcpy(tempPath, tempText->data, tempText->length);
+    int8_t *moduleDirectory = pathExpression->script->moduleDirectory;
+    int8_t *scriptPath = pathValue.heapValue->vector.data;
+    script_t *output = importScript(moduleDirectory, scriptPath);
     unlockValue(&pathValue);
-    return importScript(tempPath);
+    return output;
 }
 
 void populateImportVariables(

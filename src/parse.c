@@ -147,7 +147,7 @@ int8_t *parseIdentifier(parser_t *parser) {
     bodyPosSeekEndOfIdentifier(bodyPos);
     int8_t *tempText = getBodyPosPointer(&startBodyPos);
     int64_t tempLength = getDistanceToBodyPos(&startBodyPos, bodyPos);
-    return mallocText(tempText, tempLength);
+    return mallocTextWithLength(tempText, tempLength);
 }
 
 // If endCharacter is -1, then this function will parse

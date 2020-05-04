@@ -18,7 +18,7 @@ int main(int argc, const char *argv[]) {
     createEmptyVector(&scriptList, sizeof(script_t *));
     initializeNumberConstants();
     int8_t *scriptPath = (int8_t *)(argv[1]);
-    importScript(scriptPath);
+    importEntryPointScript(scriptPath);
     if (hasThrownError) {
         printStackTrace();
         return 1;

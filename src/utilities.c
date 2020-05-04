@@ -6,11 +6,15 @@
 #include <wordexp.h>
 #include "utilities.h"
 
-int8_t *mallocText(int8_t *text, int64_t length) {
+int8_t *mallocTextWithLength(int8_t *text, int64_t length) {
     int8_t *output = malloc(length + 1);
     memcpy(output, text, length);
     output[length] = 0;
     return output;
+}
+
+int8_t *mallocText(int8_t *text) {
+    return mallocTextWithLength(text, strlen((char *)text));
 }
 
 int8_t *mallocRealpath(int8_t *path) {
@@ -33,6 +37,24 @@ int8_t *mallocRealpath(int8_t *path) {
     int8_t *output = (int8_t *)realpath(expResult.we_wordv[0], NULL);
     wordfree(&expResult);
     return output;
+}
+
+// Returns a pointer within the given path.
+// If no extension is found, the output is null.
+int8_t *getFileExtension(int8_t *path) {
+    for (int64_t index = strlen((char *)path) - 1; index > 0; index--) {
+        int8_t tempCharacter = path[index];
+        if (tempCharacter == '/') {
+            return NULL;
+        }
+        if (tempCharacter != '.') {
+            continue;
+        }
+        if (path[index - 1] != '/') {
+            return path + index + 1;
+        }
+    }
+    return NULL;
 }
 
 int8_t *readEntireFile(int64_t *length, int8_t *path) {
