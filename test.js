@@ -11,12 +11,18 @@ if (process.argv.length !== 3) {
 
 let interpreterPath = process.argv[2];
 let socketPath = pathUtils.join(__dirname, "testSocket");
+let testSuiteDirectory = pathUtils.join(__dirname, "testSuites");
+let testModuleDirectory = pathUtils.join(__dirname, "testModule");
 
+let socketServer;
+let interpreterProcess;
 let receivedSocketData = Buffer.alloc(0);
 let interpreterClient = null;
 
-if (fs.existsSync(socketPath)) {
-    fs.unlinkSync(socketPath);
+let testSuitePathSet = [];
+let tempNameList = fs.readdirSync(testSuiteDirectory);
+for (let name of tempNameList) {
+    testSuitePathSet.push(pathUtils.join(testSuiteDirectory, name));
 }
 
 function handleReceivedPacket(data) {
@@ -47,7 +53,220 @@ function socketReceiveEvent() {
     handleReceivedPacket(packetData);
 }
 
-let socketServer = net.createServer(client => {
+function closeSocketServer() {
+    socketServer.close(() => {
+        console.log("Server finished running.");
+    });
+}
+
+function launchInterpreter() {
+    
+    console.log("Launching interpreter....");
+    interpreterProcess = childProcess.spawn(
+        interpreterPath,
+        ["--socket", socketPath]
+    );
+    
+    interpreterProcess.stdout.on("data", data => {
+        console.log(`Received stdout message: "${data.toString()}"`);
+    });
+    
+    interpreterProcess.on("close", code => {
+        console.log("Interpreter finished running.");
+        closeSocketServer();
+    });
+}
+
+function skipWhitespace(text, index) {
+    while (index < text.length) {
+        if (text.charAt(index) !== " ") {
+            break;
+        }
+        index += 1;
+    }
+    return index;
+}
+
+function seekCharacter(text, index, character) {
+    while (index < text.length) {
+        if (text.charAt(index) === character) {
+            break;
+        }
+        index += 1;
+    }
+    return index;
+}
+
+function parseTerm(text, index) {
+    let startIndex;
+    let endIndex;
+    if (text.charAt(index) === "\"") {
+        index += 1;
+        startIndex = index;
+        index = seekCharacter(text, index, "\"");
+        endIndex = index;
+        index += 1;
+    } else {
+        startIndex = index;
+        index = seekCharacter(text, index, " ");
+        endIndex = index;
+    }
+    return {
+        term: text.substring(startIndex, endIndex),
+        index: index
+    };
+}
+
+function parseTestDirective(text) {
+    if (text.length < 3 || text.substring(0, 3) !== "///") {
+        return null;
+    }
+    text = text.substring(3, text.length);
+    let output = [];
+    let index = 0;
+    while (index < text.length) {
+        index = skipWhitespace(text, index);
+        if (index >= text.length) {
+            break;
+        }
+        let tempResult = parseTerm(text, index);
+        output.push(tempResult.term);
+        index = tempResult.index;
+    }
+    return output;
+}
+
+function seekEndDirective(lineList, index) {
+    for (; index < lineList.length; index++) {
+        let tempLine = lineList[index];
+        let tempDirective = parseTestDirective(tempLine);
+        if (tempDirective === null) {
+            continue;
+        }
+        if (tempDirective[0] === "END") {
+            break;
+        }
+    }
+    return index;
+}
+
+class RuntimeAction {
+    
+}
+
+class ExpectOutputAction extends RuntimeAction {
+    
+    constructor(text) {
+        super();
+        this.text = text;
+    }
+}
+
+class TestCase {
+    
+    constructor(name) {
+        this.name = name;
+        // Map from file path to content.
+        this.fileContentMap = {};
+        this.entryPointPath = null;
+        this.runtimeActionList = [];
+        this.expectedExitCode = [];
+    }
+    
+    perform() {
+        return new Promise((resolve, reject) => {
+            // TODO: Actually perform the test case.
+            console.log("Test case name: " + this.name);
+            setTimeout(resolve, 200);
+        });
+    }
+}
+
+class TestSuite {
+    
+    constructor(path) {
+        this.path = path;
+        this.testCaseList = [];
+        let currentTestCase = null;
+        let lineList = fs.readFileSync(this.path, "utf8").split("\n");
+        for (let index = 0; index < lineList.length; index++) {
+            let tempLine = lineList[index];
+            let tempDirective = parseTestDirective(tempLine);
+            if (tempDirective === null) {
+                continue;
+            }
+            let tempCommand = tempDirective[0];
+            switch (tempCommand) {
+                case "CASE":
+                {
+                    currentTestCase = new TestCase(tempDirective[1]);
+                    this.testCaseList.push(currentTestCase);
+                    break;
+                }
+                case "FILE":
+                {
+                    index += 1;
+                    let startIndex = index;
+                    let endIndex = seekEndDirective(lineList, index);
+                    index = endIndex;
+                    let tempContent = lineList.slice(startIndex, endIndex).join("\n");
+                    let tempPath = tempDirective[1];
+                    currentTestCase.fileContentMap[tempPath] = tempContent;
+                    break;
+                }
+                case "RUN":
+                {
+                    currentTestCase.entryPointPath = tempDirective[1];
+                    break;
+                }
+                case "EXPECT_OUTPUT":
+                {
+                    index += 1;
+                    let startIndex = index;
+                    let endIndex = seekEndDirective(lineList, index);
+                    index = endIndex;
+                    for (let tempIndex = startIndex; tempIndex < endIndex; tempIndex++) {
+                        let tempAction = new ExpectOutputAction(lineList[tempIndex]);
+                        currentTestCase.runtimeActionList.push(tempAction);
+                    }
+                    break;
+                }
+                case "EXPECT_EXIT_CODE":
+                {
+                    currentTestCase.expectedExitCode = parseInt(tempDirective[1]);
+                    break;
+                }
+                default:
+                {
+                    throw new Error(`Unknown directive command "${tempCommand}".`);
+                }
+            }
+        }
+    }
+    
+    performAllTestCases() {
+        return this.testCaseList.reduce((accumulator, testCase) => {
+            return accumulator.then(() => testCase.perform());
+        }, Promise.resolve());
+    }
+}
+
+function performAllTestSuites() {
+    return testSuitePathSet.reduce((accumulator, path) => {
+        return accumulator.then(() => {
+            let testSuite = new TestSuite(path);
+            return testSuite.performAllTestCases();
+        });
+    }, Promise.resolve()).then(() => {
+        console.log("Finished running all tests suites.");
+    });
+}
+
+if (fs.existsSync(socketPath)) {
+    fs.unlinkSync(socketPath);
+}
+
+socketServer = net.createServer(client => {
     console.log("Interpreter connected to socket.");
     interpreterClient = client;
     
@@ -63,20 +282,7 @@ let socketServer = net.createServer(client => {
 
 socketServer.listen(socketPath, () => {
     console.log("Listening to socket.");
-    
-    console.log("Launching interpreter....");
-    let interpreterProcess = childProcess.spawn(interpreterPath, ["--socket", socketPath]);
-    
-    interpreterProcess.stdout.on("data", data => {
-        console.log(`Received stdout message: "${data.toString()}"`);
-    });
-    
-    interpreterProcess.on("close", code => {
-        console.log("Interpreter finished running.");
-        socketServer.close(() => {
-            console.log("Server finished running.");
-        });
-    });
+    performAllTestSuites().then(closeSocketServer);
 });
 
 

@@ -1,0 +1,30 @@
+
+/// CASE "Print numbers"
+/// FILE fileOne.logi
+PRINT 0
+PRINT 5
+PRINT 20
+PRINT 103
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+0
+5
+20
+103
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Print strings"
+/// FILE fileOne.logi
+PRINT "Hello world!"
+PRINT "It is nice to say \"hello\" to people"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Hello world!
+It is nice to say "hello" to people
+/// END
+/// EXPECT_EXIT_CODE 0
+
+
