@@ -19,11 +19,13 @@ int main(int argc, const char *argv[]) {
         printUsage();
         return 1;
     }
+    int8_t *scriptPath;
     if (argc == 3) {
         if (strcmp(argv[1], "--socket") != 0) {
             printUsage();
             return 1;
         }
+        isInSocketMode = true;
         int8_t *socketPath = mallocRealpath((int8_t *)(argv[2]));
         if (socketPath == NULL) {
             printf("ERROR: Could not find socket file!\n");
@@ -35,16 +37,15 @@ int main(int argc, const char *argv[]) {
             printf("Could not connect to socket!\n");
             return 1;
         }
-        writeToTestSocket((int8_t *)"HELLO", 5);
-        int32_t tempLength;
-        int8_t *tempData = readFromTestSocket(&tempLength);
-        printf("Received %d bytes: %s", tempLength, tempData);
-        return 0;
+        writeTextToTestSocket((int8_t *)"entryPoint");
+        scriptPath = readFromTestSocket(NULL);
+    } else {
+        isInSocketMode = false;
+        scriptPath = (int8_t *)(argv[1]);
     }
     hasThrownError = false;
     createEmptyVector(&scriptList, sizeof(script_t *));
     initializeNumberConstants();
-    int8_t *scriptPath = (int8_t *)(argv[1]);
     importEntryPointScript(scriptPath);
     if (hasThrownError) {
         printStackTrace();

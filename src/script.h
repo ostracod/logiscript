@@ -20,6 +20,7 @@ typedef struct script {
 #include "function.h"
 #include "value.h"
 
+int8_t isInSocketMode;
 vector_t scriptList; // Vector of pointers to script_t.
 
 script_t *importScript(int8_t *moduleDirectory, int8_t *scriptPath);

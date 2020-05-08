@@ -30,6 +30,11 @@ void writeToTestSocket(int8_t *data, int32_t length) {
     write(socketHandle, data, length);
 }
 
+void writeTextToTestSocket(int8_t *text) {
+    int32_t tempLength = strlen((char *)text);
+    writeToTestSocket(text, tempLength);
+}
+
 int8_t *readFromTestSocket(int32_t *lengthDestination) {
     int32_t tempLength;
     read(socketHandle, &tempLength, sizeof(tempLength));

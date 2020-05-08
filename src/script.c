@@ -13,6 +13,7 @@
 #include "resolve.h"
 #include "evaluate.h"
 #include "error.h"
+#include "testSocket.h"
 
 void cleanUpScript(script_t *script) {
     free(script->moduleDirectory);
@@ -67,7 +68,17 @@ script_t *importScript(int8_t *moduleDirectory, int8_t *scriptPath) {
     output->body = NULL;
     output->moduleDirectory = mallocText(moduleDirectory);
     output->path = absolutePath;
-    output->body = readEntireFile(&(output->bodyLength), output->path);
+    if (isInSocketMode) {
+        int8_t *messageText;
+        asprintf((char **)&messageText, "readFile %s", output->path);
+        writeTextToTestSocket(messageText);
+        free(messageText);
+        int32_t tempLength;
+        output->body = readFromTestSocket(&tempLength);
+        output->bodyLength = tempLength - 1;
+    } else {
+        output->body = readEntireFile(&(output->bodyLength), output->path);
+    }
     if (output->body == NULL) {
         THROW_BUILT_IN_ERROR(
             STATE_ERROR_CONSTANT,

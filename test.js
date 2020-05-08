@@ -16,8 +16,12 @@ let testModuleDirectory = pathUtils.join(__dirname, "testModule");
 
 let socketServer;
 let interpreterProcess;
-let receivedSocketData = Buffer.alloc(0);
 let interpreterClient = null;
+let interpreterExitCode = null;
+let receivedSocketData = Buffer.alloc(0);
+let receivedStdoutData = Buffer.alloc(0);
+let stdoutLineQueue = [];
+let activeTestCase = null;
 
 let testSuitePathSet = [];
 let tempNameList = fs.readdirSync(testSuiteDirectory);
@@ -26,16 +30,44 @@ for (let name of tempNameList) {
 }
 
 function handleReceivedPacket(data) {
-    console.log(`Received packet: "${data.toString()}"`);
-    sendPacket(Buffer.concat([Buffer.from("Very cool!"), Buffer.from([0])]));
+    let tempText = data.toString();
+    console.log(`Received packet: "${tempText}"`);
+    let endIndex = seekCharacter(tempText, 0, " ");
+    let tempCommand = tempText.substring(0, endIndex);
+    let tempOperand;
+    if (endIndex < tempText.length) {
+        tempOperand = tempText.substring(endIndex + 1, tempText.length);
+    } else {
+        tempOperand = null;
+    }
+    switch (tempCommand) {
+        case "entryPoint":
+        {
+            sendTextPacket(activeTestCase.entryPointPath);
+            break;
+        }
+        case "readFile":
+        {
+            sendTextPacket(activeTestCase.fileContentMap[tempOperand]);
+            break;
+        }
+        default:
+        {
+            throw new Error(`Unknown socket command "${tempCommand}".`);
+        }
+    }
 }
 
 function sendPacket(data) {
-    console.log(`Sending packet: "${data.toString()}"`);
+    console.log("Sending packet: " + data);
     let tempBuffer = Buffer.alloc(4);
     tempBuffer.writeInt32LE(data.length, 0);
     interpreterClient.write(tempBuffer);
     interpreterClient.write(data);
+}
+
+function sendTextPacket(text) {
+    sendPacket(Buffer.concat([Buffer.from(text), Buffer.from([0])]));
 }
 
 function socketReceiveEvent() {
@@ -53,6 +85,21 @@ function socketReceiveEvent() {
     handleReceivedPacket(packetData);
 }
 
+function stdoutReceiveEvent() {
+    let startIndex = 0;
+    for (let index = 0; index < receivedStdoutData.length; index++) {
+        if (receivedStdoutData[index] == 10) {
+            let tempLine = receivedStdoutData.slice(startIndex, index).toString();
+            console.log("Received line on stdout: " + tempLine);
+            stdoutLineQueue.push(tempLine);
+            startIndex = index + 1;
+        }
+    }
+    if (startIndex > 0) {
+        receivedStdoutData = receivedStdoutData.slice(startIndex, receivedStdoutData.length);
+    }
+}
+
 function closeSocketServer() {
     socketServer.close(() => {
         console.log("Server finished running.");
@@ -62,18 +109,20 @@ function closeSocketServer() {
 function launchInterpreter() {
     
     console.log("Launching interpreter....");
+    interpreterExitCode = null;
     interpreterProcess = childProcess.spawn(
         interpreterPath,
         ["--socket", socketPath]
     );
     
     interpreterProcess.stdout.on("data", data => {
-        console.log(`Received stdout message: "${data.toString()}"`);
+        receivedStdoutData = Buffer.concat([receivedStdoutData, data]);
+        stdoutReceiveEvent();
     });
     
     interpreterProcess.on("close", code => {
-        console.log("Interpreter finished running.");
-        closeSocketServer();
+        console.log(`Interpreter exited with code ${code}`);
+        interpreterExitCode = code;
     });
 }
 
@@ -174,10 +223,18 @@ class TestCase {
     }
     
     perform() {
+        console.log("Running test case: " + this.name);
+        activeTestCase = this;
+        launchInterpreter();
+        return this.runtimeActionList.reduce((accumulator, runtimeAction) => {
+            return accumulator.then(() => this.performRuntimeAction(runtimeAction));
+        }, Promise.resolve());
+    }
+    
+    performRuntimeAction(runtimeAction) {
         return new Promise((resolve, reject) => {
-            // TODO: Actually perform the test case.
-            console.log("Test case name: " + this.name);
-            setTimeout(resolve, 200);
+            // TODO: Perform the action and resolve or reject.
+            
         });
     }
 }
@@ -210,13 +267,19 @@ class TestSuite {
                     let endIndex = seekEndDirective(lineList, index);
                     index = endIndex;
                     let tempContent = lineList.slice(startIndex, endIndex).join("\n");
-                    let tempPath = tempDirective[1];
+                    let tempPath = pathUtils.join(
+                        testModuleDirectory,
+                        tempDirective[1]
+                    );
                     currentTestCase.fileContentMap[tempPath] = tempContent;
                     break;
                 }
                 case "RUN":
                 {
-                    currentTestCase.entryPointPath = tempDirective[1];
+                    currentTestCase.entryPointPath = pathUtils.join(
+                        testModuleDirectory,
+                        tempDirective[1]
+                    );
                     break;
                 }
                 case "EXPECT_OUTPUT":
@@ -245,6 +308,7 @@ class TestSuite {
     }
     
     performAllTestCases() {
+        console.log("Running test suite: " + this.path);
         return this.testCaseList.reduce((accumulator, testCase) => {
             return accumulator.then(() => testCase.perform());
         }, Promise.resolve());
