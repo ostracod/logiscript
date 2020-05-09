@@ -16,12 +16,12 @@ let testModuleDirectory = pathUtils.join(__dirname, "testModule");
 
 let socketServer;
 let interpreterProcess;
-let interpreterClient = null;
-let interpreterExitCode = null;
-let receivedSocketData = Buffer.alloc(0);
-let receivedStdoutData = Buffer.alloc(0);
-let stdoutLineQueue = [];
-let activeTestCase = null;
+let interpreterClient;
+let interpreterExitCode;
+let receivedSocketData;
+let receivedStdoutData;
+let stdoutLineQueue;
+let activeTestCase;
 
 let testSuitePathSet = [];
 let tempNameList = fs.readdirSync(testSuiteDirectory);
@@ -31,7 +31,6 @@ for (let name of tempNameList) {
 
 function handleReceivedPacket(data) {
     let tempText = data.toString();
-    console.log(`Received packet: "${tempText}"`);
     let endIndex = seekCharacter(tempText, 0, " ");
     let tempCommand = tempText.substring(0, endIndex);
     let tempOperand;
@@ -59,7 +58,6 @@ function handleReceivedPacket(data) {
 }
 
 function sendPacket(data) {
-    console.log("Sending packet: " + data);
     let tempBuffer = Buffer.alloc(4);
     tempBuffer.writeInt32LE(data.length, 0);
     interpreterClient.write(tempBuffer);
@@ -90,7 +88,6 @@ function stdoutReceiveEvent() {
     for (let index = 0; index < receivedStdoutData.length; index++) {
         if (receivedStdoutData[index] == 10) {
             let tempLine = receivedStdoutData.slice(startIndex, index).toString();
-            console.log("Received line on stdout: " + tempLine);
             stdoutLineQueue.push(tempLine);
             startIndex = index + 1;
         }
@@ -108,8 +105,11 @@ function closeSocketServer() {
 
 function launchInterpreter() {
     
-    console.log("Launching interpreter....");
+    receivedSocketData = Buffer.alloc(0);
+    receivedStdoutData = Buffer.alloc(0);
+    stdoutLineQueue = [];
     interpreterExitCode = null;
+    
     interpreterProcess = childProcess.spawn(
         interpreterPath,
         ["--socket", socketPath]
@@ -121,7 +121,6 @@ function launchInterpreter() {
     });
     
     interpreterProcess.on("close", code => {
-        console.log(`Interpreter exited with code ${code}`);
         interpreterExitCode = code;
     });
 }
@@ -199,15 +198,85 @@ function seekEndDirective(lineList, index) {
     return index;
 }
 
+// Invokes timerEvent with resolve and reject arguments on a timer.
+// When timerEvent invokes resolve or reject, the timer is cleared.
+function promiseInterval(delay, timerEvent) {
+    let interval;
+    return (new Promise((resolve, reject) => {
+        function invokeTimerEvent() {
+            timerEvent(resolve, reject);
+        }
+        interval = setInterval(invokeTimerEvent, delay);
+        invokeTimerEvent();
+    })).finally(() => {
+        clearInterval(interval);
+    });
+}
+
+class InterpreterStateError extends Error {
+    
+}
+
+function promiseIntervalWithTimeout(
+    operationName,
+    timerEvent,
+    delay = 20,
+    timeoutCount = 20
+) {
+    let hasFinishedPromise = false;
+    return promiseInterval(delay, (resolve, reject) => {
+        timerEvent(resolve, reject);
+        if (hasFinishedPromise) {
+            return;
+        }
+        timeoutCount -= 1;
+        if (timeoutCount <= 0) {
+            reject(new InterpreterStateError(operationName + " operation timed out."));
+        }
+    }).finally(() => {
+        hasFinishedPromise = true;
+    });
+}
+
+function waitForInterpreterProcessToExit() {
+    return promiseIntervalWithTimeout("Exit", (resolve, reject) => {
+        if (interpreterExitCode !== null) {
+            resolve();
+        }
+    });
+}
+
 class RuntimeAction {
     
 }
 
 class ExpectOutputAction extends RuntimeAction {
     
-    constructor(text) {
+    constructor(expectedText) {
         super();
-        this.text = text;
+        this.expectedText = expectedText;
+        this.receivedText = null;
+        this.hasSucceeded = false;
+    }
+    
+    perform() {
+        return promiseIntervalWithTimeout("Read", (resolve, reject) => {
+            if (stdoutLineQueue.length > 0) {
+                this.receivedText = stdoutLineQueue.shift();
+                this.hasSucceeded = (this.expectedText === this.receivedText);
+                resolve();
+            } else if (interpreterExitCode !== null) {
+                reject(new InterpreterStateError("Interpreter exited unexpectedly."));
+            }
+        });
+    }
+    
+    getFailureMessage() {
+        if (this.receivedText === null) {
+            return `Expected stdout "${this.expectedText}", did not receive message.`;
+        } else {
+            return `Expected stdout "${this.expectedText}", received "${this.receivedText}".`;
+        }
     }
 }
 
@@ -219,7 +288,18 @@ class TestCase {
         this.fileContentMap = {};
         this.entryPointPath = null;
         this.runtimeActionList = [];
-        this.expectedExitCode = [];
+        this.expectedExitCode = null;
+        this.interpreterHasStateError = false;
+        this.hasSucceeded = false;
+    }
+    
+    handleInterpreterStateError(error) {
+        if (error instanceof InterpreterStateError) {
+            console.log(error.message);
+            this.interpreterHasStateError = true;
+        } else {
+            throw error;
+        }
     }
     
     perform() {
@@ -227,14 +307,36 @@ class TestCase {
         activeTestCase = this;
         launchInterpreter();
         return this.runtimeActionList.reduce((accumulator, runtimeAction) => {
-            return accumulator.then(() => this.performRuntimeAction(runtimeAction));
-        }, Promise.resolve());
-    }
-    
-    performRuntimeAction(runtimeAction) {
-        return new Promise((resolve, reject) => {
-            // TODO: Perform the action and resolve or reject.
-            
+            return accumulator.then(() => runtimeAction.perform());
+        }, Promise.resolve()).catch((error) => {
+            this.handleInterpreterStateError(error);
+        }).then(
+            waitForInterpreterProcessToExit
+        ).catch((error) => {
+            this.handleInterpreterStateError(error);
+            interpreterProcess.kill();
+            return waitForInterpreterProcessToExit();
+        }).then(() => {
+            let tempHasSucceeded = true;
+            for (let runtimeAction of this.runtimeActionList) {
+                if (!runtimeAction.hasSucceeded) {
+                    console.log(runtimeAction.getFailureMessage());
+                    tempHasSucceeded = false;
+                }
+            }
+            if (this.interpreterHasStateError) {
+                tempHasSucceeded = false;
+            }
+            if (interpreterExitCode !== this.expectedExitCode) {
+                console.log(`Expected exited code ${this.expectedExitCode}, but received ${interpreterExitCode}.`);
+                tempHasSucceeded = false;
+            }
+            if (stdoutLineQueue.length > 0) {
+                console.log("Received unexpected stdout:");
+                console.log(stdoutLineQueue.join("\n"));
+                tempHasSucceeded = false;
+            }
+            this.hasSucceeded = tempHasSucceeded;
         });
     }
 }
@@ -243,6 +345,7 @@ class TestSuite {
     
     constructor(path) {
         this.path = path;
+        this.failureCount = 0;
         this.testCaseList = [];
         let currentTestCase = null;
         let lineList = fs.readFileSync(this.path, "utf8").split("\n");
@@ -307,22 +410,34 @@ class TestSuite {
         }
     }
     
-    performAllTestCases() {
-        console.log("Running test suite: " + this.path);
+    perform() {
+        console.log("\nRunning test suite: " + this.path);
         return this.testCaseList.reduce((accumulator, testCase) => {
             return accumulator.then(() => testCase.perform());
-        }, Promise.resolve());
+        }, Promise.resolve()).then(() => {
+            for (let testCase of this.testCaseList) {
+                if (!testCase.hasSucceeded) {
+                    this.failureCount += 1;
+                }
+            }
+            console.log(`Test suite failures: ${this.failureCount} / ${this.testCaseList.length}`);
+        });
     }
 }
 
 function performAllTestSuites() {
-    return testSuitePathSet.reduce((accumulator, path) => {
-        return accumulator.then(() => {
-            let testSuite = new TestSuite(path);
-            return testSuite.performAllTestCases();
-        });
+    let testSuiteList = testSuitePathSet.map(path => new TestSuite(path));
+    return testSuiteList.reduce((accumulator, testSuite) => {
+        return accumulator.then(() => testSuite.perform());
     }, Promise.resolve()).then(() => {
-        console.log("Finished running all tests suites.");
+        console.log("\nFinished running all tests suites.");
+        let failureCount = 0;
+        let testCaseCount = 0;
+        for (let testSuite of testSuiteList) {
+            failureCount += testSuite.failureCount;
+            testCaseCount += testSuite.testCaseList.length;
+        }
+        console.log(`TOTAL FAILURES: ${failureCount} / ${testCaseCount}`);
     });
 }
 
@@ -331,16 +446,12 @@ if (fs.existsSync(socketPath)) {
 }
 
 socketServer = net.createServer(client => {
-    console.log("Interpreter connected to socket.");
+    
     interpreterClient = client;
     
     client.on("data", data => {
         receivedSocketData = Buffer.concat([receivedSocketData, data]);
         socketReceiveEvent();
-    });
-    
-    client.on("end", () => {
-        console.log("Interpreter disconnected from socket.");
     });
 });
 
