@@ -147,8 +147,8 @@ int8_t valuesAreEqual(value_t value1, value_t value2) {
             if (!valuesAreIdentical(tempValue1, tempValue2)) {
                 return false;
             }
-            return true;
         }
+        return true;
     }
     if (value1.type == VALUE_TYPE_BUILT_IN_FUNCTION) {
         return (value1.builtInFunction == value2.builtInFunction);

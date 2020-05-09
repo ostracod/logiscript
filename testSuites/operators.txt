@@ -1,0 +1,268 @@
+
+/// CASE "Arithmetic operators"
+/// FILE fileOne.logi
+PRINT 200 + 10
+PRINT 200 - 10
+PRINT -200
+PRINT 200 * 10
+PRINT 200 / 10
+PRINT 203 % 10
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+210
+190
+-200
+2000
+20
+3
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Concatenation"
+/// FILE fileOne.logi
+PRINT "Hello, " + "world!"
+PRINT [10, 20] + [30, 40]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Hello, world!
+[10, 20, 30, 40]
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Concatenation type error 1"
+/// FILE fileOne.logi
+PRINT "Hello" + 5
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Invalid types for concatenation.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Concatenation type error 2"
+/// FILE fileOne.logi
+PRINT "Hello" + [30, 40]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Invalid types for concatenation.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Bitwise operators"
+/// FILE fileOne.logi
+PRINT ~200
+PRINT 5 | 6
+PRINT 5 & 6
+PRINT 5 ^ 6
+PRINT 24 << 2
+PRINT 24 >> 2
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+4294967095
+7
+4
+3
+96
+6
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Boolean operators"
+/// FILE fileOne.logi
+PRINT !0
+PRINT !1
+PRINT !200
+PRINT 0 || 0
+PRINT 1 || 0
+PRINT 1 || 1
+PRINT 0 && 0
+PRINT 1 && 0
+PRINT 1 && 1
+PRINT 0 ^^ 0
+PRINT 1 ^^ 0
+PRINT 1 ^^ 1
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+1
+0
+0
+0
+1
+1
+0
+0
+1
+0
+1
+0
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Comparison operators"
+/// FILE fileOne.logi
+PRINT 10 > 20
+PRINT 20 > 20
+PRINT 20 > 10
+PRINT 10 >= 20
+PRINT 20 >= 20
+PRINT 20 >= 10
+PRINT 10 < 20
+PRINT 20 < 20
+PRINT 20 < 10
+PRINT 10 <= 20
+PRINT 20 <= 20
+PRINT 20 <= 10
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+0
+0
+1
+0
+1
+1
+1
+0
+0
+1
+1
+0
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Value equality operators"
+/// FILE fileOne.logi
+PRINT 10 == 20
+PRINT 10 != 20
+PRINT 20 == 20
+PRINT 20 != 20
+PRINT 10 == "Hello"
+PRINT "Hello" == "Hello"
+PRINT "Hello" == "Henlo"
+PRINT "Hello" == "Helloooo"
+PRINT [10, 20, 30] == [10, 20, 30]
+PRINT [10, 20, 30] == [10, 40, 30]
+PRINT [10, 20, 30] == [10, 20, 30, 40]
+PRINT VOID == VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+0
+1
+1
+0
+0
+1
+0
+0
+1
+0
+0
+1
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Identity equality operators"
+/// FILE fileOne.logi
+PRINT 10 === 20
+PRINT 10 !== 20
+PRINT 20 === 20
+PRINT 20 !== 20
+PRINT 10 === "Hello"
+SET @text1, "Hello"
+SET @text2, text1
+PRINT text1 === "Hello"
+PRINT text1 === text2
+SET @list1, [10, 20, 30]
+SET @list2, list1
+PRINT list1 === [10, 20, 30]
+PRINT list1 === list2
+PRINT VOID === VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+0
+1
+1
+0
+0
+0
+1
+0
+1
+1
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Order of operations"
+/// FILE fileOne.logi
+PRINT 10 + 20 + 30
+PRINT 10 * 20 + 30
+PRINT 10 + 20 * 30
+PRINT (10 + 20) * 30
+PRINT -10 + 20
+PRINT -(10 + 20)
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+60
+230
+610
+900
+10
+-30
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Operator type error 1"
+/// FILE fileOne.logi
+PRINT 1 & "Hello"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected number value.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Operator type error 2"
+/// FILE fileOne.logi
+PRINT -VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected number value.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed operator expression 1"
+/// FILE fileOne.logi
+PRINT 10 +
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected expression.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed operator expression 2"
+/// FILE fileOne.logi
+PRINT ~
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected expression.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+

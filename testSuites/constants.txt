@@ -1,0 +1,70 @@
+
+/// CASE "Void constant"
+/// FILE fileOne.logi
+PRINT VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+(Void)
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Boolean constants"
+/// FILE fileOne.logi
+PRINT TRUE
+PRINT FALSE
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+1
+0
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Type constants"
+/// FILE fileOne.logi
+PRINT NUMBER_TYPE
+PRINT STRING_TYPE
+PRINT LIST_TYPE
+PRINT FUNCTION_TYPE
+PRINT VOID_TYPE
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+0
+1
+2
+3
+4
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Error channel constant"
+/// FILE fileOne.logi
+PRINT ERROR_CHANNEL
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+0
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Error number constants"
+/// FILE fileOne.logi
+PRINT PARSE_ERROR
+PRINT TYPE_ERROR
+PRINT NUMBER_ERROR
+PRINT DATA_ERROR
+PRINT STATE_ERROR
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+0
+1
+2
+3
+4
+/// END
+/// EXPECT_EXIT_CODE 0
+
+
