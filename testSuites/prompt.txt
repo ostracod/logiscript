@@ -1,0 +1,20 @@
+
+/// CASE "Prompt string"
+/// FILE fileOne.logi
+PRINT "Enter a string:"
+PROMPT @x
+PRINT "You entered this string:"
+PRINT x
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Enter a string:
+/// END
+/// PROVIDE_INPUT "Hello world!"
+/// EXPECT_OUTPUT
+You entered this string:
+Hello world!
+/// END
+/// EXPECT_EXIT_CODE 0
+
+

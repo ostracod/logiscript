@@ -248,7 +248,9 @@ function waitForInterpreterProcessToExit() {
 }
 
 class RuntimeAction {
-    
+    constructor() {
+        this.hasSucceeded = false;
+    }
 }
 
 class ReadLineAction extends RuntimeAction {
@@ -256,7 +258,6 @@ class ReadLineAction extends RuntimeAction {
     constructor(expectedText) {
         super();
         this.receivedText = null;
-        this.hasSucceeded = false;
     }
     
     perform() {
@@ -325,6 +326,38 @@ class ExpectTracePosAction extends ReadLineAction {
     }
 }
 
+class ProvideInputAction extends RuntimeAction {
+    
+    constructor(text) {
+        super();
+        this.text = text;
+    }
+    
+    perform() {
+        return promiseIntervalWithTimeout("Prompt", (resolve, reject) => {
+            if (receivedStdoutData.length >= 2) {
+                if (receivedStdoutData[0] === 62 && receivedStdoutData[1] === 32) {
+                    receivedStdoutData = receivedStdoutData.slice(
+                        2,
+                        receivedStdoutData.length
+                    );
+                    interpreterProcess.stdin.write(this.text + "\n");
+                    this.hasSucceeded = true;
+                    resolve();
+                } else {
+                    reject(new InterpreterStateError("Expected stdin prompt."));
+                }
+            } else if (interpreterHasExited) {
+                reject(new InterpreterStateError("Interpreter exited unexpectedly."));
+            }
+        });
+    }
+    
+    getFailureMessage() {
+        return "Failed to provide input text.";
+    }
+}
+
 class TestCase {
     
     constructor(name) {
@@ -334,6 +367,7 @@ class TestCase {
         this.entryPointPath = null;
         this.runtimeActionList = [];
         this.expectedExitCode = null;
+        this.isExpectingStackTrace = false;
         this.interpreterHasStateError = false;
         this.hasSucceeded = false;
     }
@@ -379,7 +413,23 @@ class TestCase {
                 console.log(`Expected exit code ${this.expectedExitCode}, but received ${interpreterProcess.exitCode}.`);
                 tempHasSucceeded = false;
             }
-            if (stdoutLineQueue.length > 0) {
+            let hasReceivedUnexpectedStdout = false;
+            if (this.isExpectingStackTrace) {
+                if (stdoutLineQueue.length <= 0) {
+                    console.log("Expected stack trace.");
+                    tempHasSucceeded = false;
+                }
+                for (let line of stdoutLineQueue) {
+                    let tempResult = line.match(tracePosRegex);
+                    if (tempResult === null) {
+                        hasReceivedUnexpectedStdout = true;
+                        break;
+                    }
+                }
+            } else if (stdoutLineQueue.length > 0) {
+                hasReceivedUnexpectedStdout = true;
+            }
+            if (hasReceivedUnexpectedStdout) {
                 console.log("Received unexpected stdout:");
                 console.log(stdoutLineQueue.join("\n"));
                 tempHasSucceeded = false;
@@ -445,6 +495,12 @@ class TestSuite {
                     }
                     break;
                 }
+                case "PROVIDE_INPUT":
+                {
+                    let tempAction = new ProvideInputAction(tempDirective[1]);
+                    currentTestCase.runtimeActionList.push(tempAction);
+                    break;
+                }
                 case "EXPECT_TRACE_POS":
                 {
                     let tempAction = new ExpectTracePosAction(
@@ -452,6 +508,11 @@ class TestSuite {
                         pathUtils.join(testModuleDirectory, tempDirective[2])
                     );
                     currentTestCase.runtimeActionList.push(tempAction);
+                    break;
+                }
+                case "EXPECT_STACK_TRACE":
+                {
+                    currentTestCase.isExpectingStackTrace = true;
                     break;
                 }
                 case "EXPECT_EXIT_CODE":

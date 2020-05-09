@@ -26,6 +26,7 @@ int main(int argc, const char *argv[]) {
             return 1;
         }
         isInSocketMode = true;
+        setbuf(stdout, NULL);
         int8_t *socketPath = mallocRealpath((int8_t *)(argv[2]));
         if (socketPath == NULL) {
             printf("ERROR: Could not find socket file!\n");
