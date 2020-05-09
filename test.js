@@ -13,11 +13,12 @@ let interpreterPath = process.argv[2];
 let socketPath = pathUtils.join(__dirname, "testSocket");
 let testSuiteDirectory = pathUtils.join(__dirname, "testSuites");
 let testModuleDirectory = pathUtils.join(__dirname, "testModule");
+let tracePosRegex = /^From line (\d+) of (.+)$/;
 
 let socketServer;
 let interpreterProcess;
 let interpreterClient;
-let interpreterExitCode;
+let interpreterHasExited;
 let receivedSocketData;
 let receivedStdoutData;
 let stdoutLineQueue;
@@ -108,7 +109,7 @@ function launchInterpreter() {
     receivedSocketData = Buffer.alloc(0);
     receivedStdoutData = Buffer.alloc(0);
     stdoutLineQueue = [];
-    interpreterExitCode = null;
+    interpreterHasExited = false;
     
     interpreterProcess = childProcess.spawn(
         interpreterPath,
@@ -120,8 +121,8 @@ function launchInterpreter() {
         stdoutReceiveEvent();
     });
     
-    interpreterProcess.on("close", code => {
-        interpreterExitCode = code;
+    interpreterProcess.on("close", () => {
+        interpreterHasExited = true;
     });
 }
 
@@ -240,7 +241,7 @@ function promiseIntervalWithTimeout(
 
 function waitForInterpreterProcessToExit() {
     return promiseIntervalWithTimeout("Exit", (resolve, reject) => {
-        if (interpreterExitCode !== null) {
+        if (interpreterHasExited) {
             resolve();
         }
     });
@@ -250,11 +251,10 @@ class RuntimeAction {
     
 }
 
-class ExpectOutputAction extends RuntimeAction {
+class ReadLineAction extends RuntimeAction {
     
     constructor(expectedText) {
         super();
-        this.expectedText = expectedText;
         this.receivedText = null;
         this.hasSucceeded = false;
     }
@@ -263,12 +263,24 @@ class ExpectOutputAction extends RuntimeAction {
         return promiseIntervalWithTimeout("Read", (resolve, reject) => {
             if (stdoutLineQueue.length > 0) {
                 this.receivedText = stdoutLineQueue.shift();
-                this.hasSucceeded = (this.expectedText === this.receivedText);
+                this.checkReceivedText();
                 resolve();
-            } else if (interpreterExitCode !== null) {
+            } else if (interpreterHasExited) {
                 reject(new InterpreterStateError("Interpreter exited unexpectedly."));
             }
         });
+    }
+}
+
+class ExpectOutputAction extends ReadLineAction {
+    
+    constructor(expectedText) {
+        super();
+        this.expectedText = expectedText;
+    }
+    
+    checkReceivedText() {
+        this.hasSucceeded = (this.expectedText === this.receivedText);
     }
     
     getFailureMessage() {
@@ -277,6 +289,39 @@ class ExpectOutputAction extends RuntimeAction {
         } else {
             return `Expected stdout "${this.expectedText}", received "${this.receivedText}".`;
         }
+    }
+}
+
+class ExpectTracePosAction extends ReadLineAction {
+    
+    constructor(expectedLineNumber, expectedPath) {
+        super();
+        this.expectedLineNumber = expectedLineNumber;
+        this.expectedPath = expectedPath;
+        this.receivedLineNumber = null;
+        this.receivedPath = null;
+    }
+    
+    checkReceivedText() {
+        let tempResult = this.receivedText.match(tracePosRegex);
+        if (tempResult === null) {
+            this.hasSucceeded = false;
+            return;
+        }
+        this.receivedLineNumber = parseInt(tempResult[1]);
+        this.receivedPath = tempResult[2];
+        this.hasSucceeded = (this.expectedLineNumber === this.receivedLineNumber
+            && this.expectedPath === this.receivedPath);
+    }
+    
+    getFailureMessage() {
+        let output = `Expected stack trace pos on line ${this.expectedLineNumber} of ${this.expectedPath}, `;
+        if (this.receivedText === null) {
+            output += "did not receive message.";
+        } else {
+            output += "received:\n" + this.receivedText;
+        }
+        return output;
     }
 }
 
@@ -327,8 +372,11 @@ class TestCase {
             if (this.interpreterHasStateError) {
                 tempHasSucceeded = false;
             }
-            if (interpreterExitCode !== this.expectedExitCode) {
-                console.log(`Expected exited code ${this.expectedExitCode}, but received ${interpreterExitCode}.`);
+            if (interpreterProcess.signalCode !== null) {
+                console.log(`Interpreter exited with ${interpreterProcess.signalCode} signal.`);
+                tempHasSucceeded = false;
+            } else if (interpreterProcess.exitCode !== this.expectedExitCode) {
+                console.log(`Expected exit code ${this.expectedExitCode}, but received ${interpreterProcess.exitCode}.`);
                 tempHasSucceeded = false;
             }
             if (stdoutLineQueue.length > 0) {
@@ -395,6 +443,15 @@ class TestSuite {
                         let tempAction = new ExpectOutputAction(lineList[tempIndex]);
                         currentTestCase.runtimeActionList.push(tempAction);
                     }
+                    break;
+                }
+                case "EXPECT_TRACE_POS":
+                {
+                    let tempAction = new ExpectTracePosAction(
+                        parseInt(tempDirective[1]),
+                        pathUtils.join(testModuleDirectory, tempDirective[2])
+                    );
+                    currentTestCase.runtimeActionList.push(tempAction);
                     break;
                 }
                 case "EXPECT_EXIT_CODE":

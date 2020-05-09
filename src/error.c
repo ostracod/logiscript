@@ -15,8 +15,8 @@ errorConstant_t errorConstantSet[] = {
     {(int8_t *)"STATE_ERROR", STATE_ERROR_CONSTANT}
 };
 
-bodyPos_t traceBodyPosList[MAXIMUM_STACK_TRACE_LENGTH];
-int32_t traceBodyPosIndex = 0;
+stackTracePos_t stackTracePosList[MAXIMUM_STACK_TRACE_LENGTH];
+int32_t stackTracePosIndex = 0;
 
 errorConstant_t *findErrorConstantByCode(int32_t errorCode) {
     int32_t tempLength = sizeof(errorConstantSet) / sizeof(*errorConstantSet);
@@ -40,6 +40,16 @@ void addErrorConstantsToNumberConstants(vector_t *destination) {
     }
 }
 
+void clearStackTrace() {
+    for (int32_t index = 0; index < stackTracePosIndex; index++) {
+        stackTracePos_t *tempPos = stackTracePosList + index;
+        if (tempPos->hasCopiedPath) {
+            free(tempPos->path);
+        }
+    }
+    stackTracePosIndex = 0;
+}
+
 void throwError(int32_t channel, value_t value) {
     int8_t tempIsRethrow = false;
     if (channel == thrownErrorChannel
@@ -53,7 +63,7 @@ void throwError(int32_t channel, value_t value) {
     thrownErrorValue = value;
     lockValue(&value);
     if (!tempIsRethrow) {
-        traceBodyPosIndex = 0;
+        clearStackTrace();
     }
     hasThrownError = true;
 }
@@ -83,9 +93,24 @@ void printBuiltInError(int32_t errorCode, int8_t *message) {
 }
 
 void addBodyPosToStackTrace(bodyPos_t *bodyPos) {
-    if (traceBodyPosIndex < MAXIMUM_STACK_TRACE_LENGTH) {
-        traceBodyPosList[traceBodyPosIndex] = *bodyPos;
-        traceBodyPosIndex += 1;
+    if (stackTracePosIndex < MAXIMUM_STACK_TRACE_LENGTH) {
+        stackTracePos_t *tempPos = stackTracePosList + stackTracePosIndex;
+        tempPos->lineNumber = bodyPos->lineNumber;
+        // Note: If script is cleaned up, then path will become invalid.
+        // This complexity is addressed in cleanUpScript, and must be
+        // tolerated for performance reasons.
+        tempPos->path = bodyPos->script->path;
+        tempPos->hasCopiedPath = false;
+        stackTracePosIndex += 1;
+    }
+}
+
+void copyStackTracePosPaths() {
+    for (int32_t index = 0; index < stackTracePosIndex; index++) {
+        stackTracePos_t *tempPos = stackTracePosList + index;
+        if (!tempPos->hasCopiedPath) {
+            tempPos->path = mallocText(tempPos->path);
+        }
     }
 }
 
@@ -113,9 +138,9 @@ void printStackTrace() {
         int8_t *tempText = tempStringValue.heapValue->vector.data;
         printf("Uncaught value (channel = %d): %s\n", thrownErrorChannel, tempText);
     }
-    for (int32_t index = 0; index < traceBodyPosIndex; index++) {
-        bodyPos_t *tempBodyPos = traceBodyPosList + index;
-        printf("From line %lld of %s\n", tempBodyPos->lineNumber, tempBodyPos->script->path);
+    for (int32_t index = 0; index < stackTracePosIndex; index++) {
+        stackTracePos_t *tempPos = stackTracePosList + index;
+        printf("From line %lld of %s\n", tempPos->lineNumber, tempPos->path);
     }
 }
 
@@ -123,7 +148,7 @@ int32_t getStackTraceLength() {
     if (!hasThrownError) {
         return 0;
     }
-    return traceBodyPosIndex;
+    return stackTracePosIndex;
 }
 
 

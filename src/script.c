@@ -16,6 +16,7 @@
 #include "testSocket.h"
 
 void cleanUpScript(script_t *script) {
+    copyStackTracePosPaths();
     free(script->moduleDirectory);
     free(script->path);
     if (script->body != NULL) {

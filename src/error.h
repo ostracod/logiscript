@@ -24,6 +24,12 @@ typedef struct errorConstant {
     int32_t code;
 } errorConstant_t;
 
+typedef struct stackTracePos {
+    int64_t lineNumber;
+    int8_t *path;
+    int8_t hasCopiedPath;
+} stackTracePos_t;
+
 #include "value.h"
 #include "parse.h"
 
@@ -35,6 +41,7 @@ void addErrorConstantsToNumberConstants(vector_t *destination);
 void throwError(int32_t channel, value_t value);
 void throwBuiltInError(int32_t errorCode, int8_t *message);
 void addBodyPosToStackTrace(bodyPos_t *bodyPos);
+void copyStackTracePosPaths();
 void printStackTrace();
 int32_t getStackTraceLength();
 
