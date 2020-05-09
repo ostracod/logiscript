@@ -22,6 +22,7 @@ let interpreterHasExited;
 let receivedSocketData;
 let receivedStdoutData;
 let stdoutLineQueue;
+let receivedHeapCount;
 let activeTestCase;
 
 let testSuitePathSet = [];
@@ -41,6 +42,11 @@ function handleReceivedPacket(data) {
         tempOperand = null;
     }
     switch (tempCommand) {
+        case "garbageCollection":
+        {
+            sendTextPacket(activeTestCase.garbageCollectionMode + "");
+            break;
+        }
         case "entryPoint":
         {
             sendTextPacket(activeTestCase.entryPointPath);
@@ -49,6 +55,11 @@ function handleReceivedPacket(data) {
         case "readFile":
         {
             sendTextPacket(activeTestCase.fileContentMap[tempOperand]);
+            break;
+        }
+        case "heapCount":
+        {
+            receivedHeapCount = parseInt(tempOperand);
             break;
         }
         default:
@@ -106,10 +117,11 @@ function closeSocketServer() {
 
 function launchInterpreter() {
     
+    interpreterHasExited = false;
     receivedSocketData = Buffer.alloc(0);
     receivedStdoutData = Buffer.alloc(0);
     stdoutLineQueue = [];
-    interpreterHasExited = false;
+    receivedHeapCount = null;
     
     interpreterProcess = childProcess.spawn(
         interpreterPath,
@@ -364,10 +376,13 @@ class TestCase {
         this.name = name;
         // Map from file path to content.
         this.fileContentMap = {};
+        this.garbageCollectionMode = 0;
         this.entryPointPath = null;
         this.runtimeActionList = [];
         this.expectedExitCode = null;
         this.isExpectingStackTrace = false;
+        this.minimumExpectedHeapCount = null;
+        this.maximumExpectedHeapCount = null;
         this.interpreterHasStateError = false;
         this.hasSucceeded = false;
     }
@@ -396,28 +411,28 @@ class TestCase {
             interpreterProcess.kill();
             return waitForInterpreterProcessToExit();
         }).then(() => {
-            let tempHasSucceeded = true;
+            let nextHasSucceeded = true;
             for (let runtimeAction of this.runtimeActionList) {
                 if (!runtimeAction.hasSucceeded) {
                     console.log(runtimeAction.getFailureMessage());
-                    tempHasSucceeded = false;
+                    nextHasSucceeded = false;
                 }
             }
             if (this.interpreterHasStateError) {
-                tempHasSucceeded = false;
+                nextHasSucceeded = false;
             }
             if (interpreterProcess.signalCode !== null) {
                 console.log(`Interpreter exited with ${interpreterProcess.signalCode} signal.`);
-                tempHasSucceeded = false;
+                nextHasSucceeded = false;
             } else if (interpreterProcess.exitCode !== this.expectedExitCode) {
                 console.log(`Expected exit code ${this.expectedExitCode}, but received ${interpreterProcess.exitCode}.`);
-                tempHasSucceeded = false;
+                nextHasSucceeded = false;
             }
             let hasReceivedUnexpectedStdout = false;
             if (this.isExpectingStackTrace) {
                 if (stdoutLineQueue.length <= 0) {
                     console.log("Expected stack trace.");
-                    tempHasSucceeded = false;
+                    nextHasSucceeded = false;
                 }
                 for (let line of stdoutLineQueue) {
                     let tempResult = line.match(tracePosRegex);
@@ -432,9 +447,34 @@ class TestCase {
             if (hasReceivedUnexpectedStdout) {
                 console.log("Received unexpected stdout:");
                 console.log(stdoutLineQueue.join("\n"));
-                tempHasSucceeded = false;
+                nextHasSucceeded = false;
             }
-            this.hasSucceeded = tempHasSucceeded;
+            let heapCountIsMissing = false;
+            if (this.minimumExpectedHeapCount !== null) {
+                if (receivedHeapCount === null) {
+                    heapCountIsMissing = true;
+                } else {
+                    if (receivedHeapCount < this.minimumExpectedHeapCount) {
+                        console.log(`Heap allocation count was ${receivedHeapCount}, but expected no fewer than ${this.minimumExpectedHeapCount}.`);
+                        nextHasSucceeded = false;
+                    }
+                }
+            }
+            if (this.maximumExpectedHeapCount !== null) {
+                if (receivedHeapCount === null) {
+                    heapCountIsMissing = true;
+                } else {
+                    if (receivedHeapCount > this.maximumExpectedHeapCount) {
+                        console.log(`Heap allocation count was ${receivedHeapCount}, but expected no more than ${this.maximumExpectedHeapCount}.`);
+                        nextHasSucceeded = false;
+                    }
+                }
+            }
+            if (heapCountIsMissing) {
+                console.log("Interpreter did not report heap allocation count.");
+                nextHasSucceeded = false;
+            }
+            this.hasSucceeded = nextHasSucceeded;
         });
     }
 }
@@ -475,6 +515,11 @@ class TestSuite {
                     currentTestCase.fileContentMap[tempPath] = tempContent;
                     break;
                 }
+                case "GARBAGE_COLLECTION":
+                {
+                    currentTestCase.garbageCollectionMode = parseInt(tempDirective[1]);
+                    break;
+                }
                 case "RUN":
                 {
                     currentTestCase.entryPointPath = pathUtils.join(
@@ -513,6 +558,16 @@ class TestSuite {
                 case "EXPECT_STACK_TRACE":
                 {
                     currentTestCase.isExpectingStackTrace = true;
+                    break;
+                }
+                case "EXPECT_MINIMUM_HEAP_COUNT":
+                {
+                    currentTestCase.minimumExpectedHeapCount = parseInt(tempDirective[1]);
+                    break;
+                }
+                case "EXPECT_MAXIMUM_HEAP_COUNT":
+                {
+                    currentTestCase.maximumExpectedHeapCount = parseInt(tempDirective[1]);
                     break;
                 }
                 case "EXPECT_EXIT_CODE":

@@ -83,6 +83,9 @@ typedef struct heapValue {
 #include "function.h"
 #include "variable.h"
 
+int8_t shouldUseReferenceCounting;
+int8_t shouldUseMarkAndSweep;
+
 heapValue_t *createHeapValue(int8_t type);
 void deleteValueIfUnreferenced(value_t *value);
 void lockHeapValue(heapValue_t *heapValue);
@@ -111,6 +114,8 @@ void writeValueToAlias(alias_t alias, value_t value);
 value_t readValueFromHyperValue(hyperValue_t hyperValue);
 void writeValueToLocation(hyperValue_t location, value_t value);
 void printAllHeapValues();
+void setGarbageCollectionMode(int32_t mode);
+int64_t getHeapAllocationCount();
 
 // VALUE_HEADER_FILE
 #endif

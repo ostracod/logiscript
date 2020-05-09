@@ -9,6 +9,7 @@
 #include "resolve.h"
 #include "error.h"
 #include "testSocket.h"
+#include "value.h"
 
 void printUsage() {
     printf("Usage:\nlogiscript [file path]\n");
@@ -38,6 +39,12 @@ int main(int argc, const char *argv[]) {
             printf("Could not connect to socket!\n");
             return 1;
         }
+        writeTextToTestSocket((int8_t *)"garbageCollection");
+        int8_t *tempText = readFromTestSocket(NULL);
+        int32_t tempMode;
+        sscanf((char *)tempText, "%d", &tempMode);
+        free(tempText);
+        setGarbageCollectionMode(tempMode);
         writeTextToTestSocket((int8_t *)"entryPoint");
         scriptPath = readFromTestSocket(NULL);
     } else {
@@ -48,6 +55,12 @@ int main(int argc, const char *argv[]) {
     createEmptyVector(&scriptList, sizeof(script_t *));
     initializeNumberConstants();
     importEntryPointScript(scriptPath);
+    if (isInSocketMode) {
+        int8_t *messageText;
+        asprintf((char **)&messageText, "heapCount %lld", getHeapAllocationCount());
+        writeTextToTestSocket(messageText);
+        free(messageText);
+    }
     if (hasThrownError) {
         printStackTrace();
         return 1;

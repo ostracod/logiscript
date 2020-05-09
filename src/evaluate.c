@@ -13,6 +13,7 @@
 #include "script.h"
 
 int32_t markAndSweepDelay = 0;
+int32_t maximumMarkAndSweepDelay = 10000;
 
 hyperValue_t accessSequenceElement(value_t sequenceValue, value_t indexValue) {
     hyperValue_t output;
@@ -355,7 +356,7 @@ void evaluateStatement(heapValue_t *frame, baseStatement_t *statement) {
         }
     }
     markAndSweepDelay += 1;
-    if (markAndSweepDelay > 10000) {
+    if (markAndSweepDelay > maximumMarkAndSweepDelay) {
         markAndSweepHeapValues();
         markAndSweepDelay = 0;
     }

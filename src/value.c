@@ -6,7 +6,10 @@
 #include "utilities.h"
 #include "value.h"
 #include "error.h"
+#include "evaluate.h"
 
+int8_t shouldUseReferenceCounting = true;
+int8_t shouldUseMarkAndSweep = true;
 heapValue_t *firstHeapValue = NULL;
 
 heapValue_t *createHeapValue(int8_t type) {
@@ -132,6 +135,9 @@ heapValue_t *getHeapValueFromHyperValue(hyperValue_t *hyperValue) {
 }
 
 void deleteHeapValueIfUnreferenced(heapValue_t *heapValue) {
+    if (!shouldUseReferenceCounting) {
+        return;
+    }
     if (heapValue->referenceCount <= 0 && heapValue->lockDepth <= 0) {
         deleteHeapValue(heapValue, true);
     }
@@ -356,6 +362,9 @@ void markHyperValue(hyperValue_t *hyperValue) {
 }
 
 void markAndSweepHeapValues() {
+    if (!shouldUseMarkAndSweep) {
+        return;
+    }
     // Unmark all values.
     heapValue_t *tempHeapValue = firstHeapValue;
     while (tempHeapValue != NULL) {
@@ -617,6 +626,46 @@ void printAllHeapValues() {
         );
         tempHeapValue = tempHeapValue->next;
     }
+}
+
+void setGarbageCollectionMode(int32_t mode) {
+    switch(mode) {
+        case 0:
+        {
+            break;
+        }
+        case 1:
+        {
+            shouldUseReferenceCounting = false;
+            maximumMarkAndSweepDelay = 0;
+            break;
+        }
+        case 2:
+        {
+            shouldUseMarkAndSweep = false;
+            break;
+        }
+        case 3:
+        {
+            shouldUseReferenceCounting = false;
+            shouldUseMarkAndSweep = false;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+
+int64_t getHeapAllocationCount() {
+    int64_t output = 0;
+    heapValue_t *tempHeapValue = firstHeapValue;
+    while (tempHeapValue != NULL) {
+        output += 1;
+        tempHeapValue = tempHeapValue->next;
+    }
+    return output;
 }
 
 
