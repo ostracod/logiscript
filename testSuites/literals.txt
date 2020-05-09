@@ -1,0 +1,162 @@
+
+/// CASE "Number literals"
+/// FILE fileOne.logi
+PRINT 5
+PRINT 10
+PRINT 200
+PRINT 8.5
+PRINT 0.123
+PRINT .456
+PRINT 30.
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+5
+10
+200
+8.5
+0.123
+0.456
+30
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Malformed number literal"
+/// FILE fileOne.logi
+PRINT 10.20.30
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Malformed number literal.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Character literals"
+/// FILE fileOne.logi
+PRINT 'A'
+PRINT '5'
+PRINT '"'
+PRINT '\n'
+PRINT '\t'
+PRINT '\''
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+65
+53
+34
+10
+9
+39
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Malformed character literal 1"
+/// FILE fileOne.logi
+PRINT '
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Malformed character.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed character literal 2"
+/// FILE fileOne.logi
+PRINT 'A
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Malformed character.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "String literals"
+/// FILE fileOne.logi
+PRINT "Hello world!"
+PRINT "A"
+PRINT ""
+PRINT "Very\ncool!"
+PRINT "I will say \"hello\" to you"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Hello world!
+A
+
+Very
+cool!
+I will say "hello" to you
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Malformed string literal"
+/// FILE fileOne.logi
+PRINT "
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected '"'.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "List literals"
+/// FILE fileOne.logi
+PRINT [10, 20, 30]
+PRINT [40]
+PRINT []
+PRINT [ 50, 60, 70 ]
+PRINT [80,90,100]
+PRINT [110, "Text", 'A']
+PRINT [[120, 130], [140, 150]]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+[10, 20, 30]
+[40]
+[]
+[50, 60, 70]
+[80, 90, 100]
+[110, Text, 65]
+[[120, 130], [140, 150]]
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Malformed list literal 1"
+/// FILE fileOne.logi
+PRINT [
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected expression.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed list literal 2"
+/// FILE fileOne.logi
+PRINT [10
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected ',' or ']'.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed list literal 3"
+/// FILE fileOne.logi
+PRINT [10, 20,
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected expression.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+
