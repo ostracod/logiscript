@@ -19,6 +19,28 @@ PRINT 203 % 10
 /// END
 /// EXPECT_EXIT_CODE 0
 
+/// CASE "Divide by zero error 1"
+/// FILE fileOne.logi
+PRINT 1 / 0
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught NUMBER_ERROR: Division by zero.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Divide by zero error 2"
+/// FILE fileOne.logi
+PRINT 1 % 0
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught NUMBER_ERROR: Division by zero.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
 /// CASE "Concatenation"
 /// FILE fileOne.logi
 PRINT "Hello, " + "world!"

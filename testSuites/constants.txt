@@ -67,4 +67,15 @@ PRINT STATE_ERROR
 /// END
 /// EXPECT_EXIT_CODE 0
 
+/// CASE "Do not allow changing value of constant"
+/// FILE fileOne.logi
+SET TRUE, 99
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected value location.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
 

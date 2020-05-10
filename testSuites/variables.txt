@@ -1,0 +1,145 @@
+
+/// CASE "Set variable value"
+/// FILE fileOne.logi
+PRINT @x
+PRINT @y
+SET x, 10
+SET y, 20
+PRINT x
+PRINT y
+SET x, "Very cool"
+SET y, [30, 40, 50]
+PRINT x
+PRINT y
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+(Void)
+(Void)
+10
+20
+Very cool
+[30, 40, 50]
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Variable in custom function"
+/// FILE fileOne.logi
+SET @x, 10
+PRINT x
+{
+    PRINT x
+    SET x, 20
+    PRINT x
+}
+PRINT x
+{
+    SET @x, 30
+    PRINT x
+}
+PRINT x
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+10
+10
+20
+20
+30
+20
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Allow duplicate variable declaration"
+/// FILE fileOne.logi
+SET @first, 10
+SET @second, 20
+PRINT first
+PRINT second
+SET @first, 30
+PRINT first
+PRINT @second
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+10
+20
+30
+20
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Valid identifiers"
+/// FILE fileOne.logi
+SET @myNumber, 10
+SET @myNumber2, 20
+SET @MY_NUMBER, 30
+SET @__secret_value, 40
+PRINT myNumber
+PRINT myNumber2
+PRINT MY_NUMBER
+PRINT __secret_value
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+10
+20
+30
+40
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Invalid variable identifier"
+/// FILE fileOne.logi
+SET @10, 20
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected identifier.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Unknown variable identifier 1"
+/// FILE fileOne.logi
+PRINT mystery
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Unknown identifier "mystery".
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Unknown variable identifier 2"
+/// FILE fileOne.logi
+{
+    SET @mystery, 10
+}
+PRINT mystery
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Unknown identifier "mystery".
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Allow overriding built-in constants"
+/// FILE fileOne.logi
+SET @TRUE, "one"
+SET @TYPE_ERROR, "two"
+SET @RESIZE, "three"
+PRINT TRUE
+PRINT TYPE_ERROR
+PRINT RESIZE
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+one
+two
+three
+/// END
+/// EXPECT_EXIT_CODE 0
+
+
