@@ -4,16 +4,28 @@ let net = require("net");
 let pathUtils = require("path");
 let childProcess = require("child_process");
 
-if (process.argv.length !== 3) {
-    console.log("Please provide a path to a LogiScript interpreter.");
+function printUsageAndExit() {
+    console.log("Usage:");
+    console.log("node ./test.js (interpreter path) (test file name?)");
     process.exit(1);
 }
 
-let interpreterPath = process.argv[2];
+if (process.argv.length < 3 || process.argv.length > 4) {
+    printUsageAndExit();
+}
+
 let socketPath = pathUtils.join(__dirname, "testSocket");
 let testSuiteDirectory = pathUtils.join(__dirname, "testSuites");
 let testModuleDirectory = pathUtils.join(__dirname, "testModule");
 let tracePosRegex = /^From line (\d+) of (.+)$/;
+
+let interpreterPath = process.argv[2];
+let testFilePath;
+if (process.argv.length > 3) {
+    testFilePath = pathUtils.join(testSuiteDirectory, process.argv[3]);
+} else {
+    testFilePath = null;
+}
 
 let socketServer;
 let interpreterProcess;
@@ -630,7 +642,14 @@ socketServer = net.createServer(client => {
 
 socketServer.listen(socketPath, () => {
     console.log("Listening to socket.");
-    performAllTestSuites().then(closeSocketServer);
+    let tempPromise;
+    if (testFilePath === null) {
+        tempPromise = performAllTestSuites();
+    } else {
+        let tempTestSuite = new TestSuite(testFilePath);
+        tempPromise = tempTestSuite.perform();
+    }
+    tempPromise.then(closeSocketServer);
 });
 
 

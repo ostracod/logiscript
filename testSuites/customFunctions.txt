@@ -1,0 +1,259 @@
+
+/// CASE "Custom function without arguments"
+/// FILE fileOne.logi
+{
+    PRINT "Wow, very cool"
+}
+SET @MY_FUNC, {
+    PRINT "This is a function"
+}
+MY_FUNC
+MY_FUNC
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Wow, very cool
+This is a function
+This is a function
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Custom function with arguments"
+/// FILE fileOne.logi
+{value
+    PRINT value + 1
+} 10
+SET @MY_FUNC, { x,y
+    PRINT x * x + y
+}
+MY_FUNC 3, 20
+MY_FUNC 5, 100
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+11
+29
+125
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Custom function argument overrides variables"
+/// FILE fileOne.logi
+SET @value, 10
+SET @MY_FUNC, {value
+    PRINT value
+    {value
+        PRINT value
+    } 30
+    PRINT value
+}
+PRINT value
+MY_FUNC 20
+PRINT value
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+10
+20
+30
+20
+10
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Custom function duplicate argument name 1"
+/// FILE fileOne.logi
+SET @MY_FUNC, {first, second, second
+    PRINT "Hello, world!"
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Duplicate variable "second".
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Custom function duplicate argument name 2"
+/// FILE fileOne.logi
+SET @MY_FUNC, {first, second
+    PRINT "Hello, world!"
+    SET @second, 99
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Duplicate variable "second".
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed custom function 1"
+/// FILE fileOne.logi
+SET @MY_FUNC, {
+    PRINT "Hello, world!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected '}'.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed custom function 2"
+/// FILE fileOne.logi
+SET @MY_FUNC, {x,
+    PRINT "Hello, world!"
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected identifier.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed custom function 3"
+/// FILE fileOne.logi
+SET @MY_FUNC, {x, 123
+    PRINT "Hello, world!"
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected identifier.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Custom function with missing arguments"
+/// FILE fileOne.logi
+SET @MY_FUNC, {first, second, third
+    PRINT first
+    PRINT second
+    PRINT third
+}
+MY_FUNC 10, 20, 30
+MY_FUNC 10
+MY_FUNC
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+10
+20
+30
+10
+(Void)
+(Void)
+(Void)
+(Void)
+(Void)
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Custom function with too many arguments"
+/// FILE fileOne.logi
+SET @MY_FUNC, {first, second, third
+    PRINT first
+    PRINT second
+    PRINT third
+}
+MY_FUNC 10, 20, 30, 40
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught DATA_ERROR: Expected at most 3 arguments.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Custom function pass by reference"
+/// FILE fileOne.logi
+SET @MY_FUNC, {dest1, dest2, value
+    SET dest1, value * 2
+    SET dest2, value * 3
+}
+MY_FUNC @x, @y, 10
+PRINT x
+PRINT y
+MY_FUNC @x, @y, 20
+PRINT x
+PRINT y
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+20
+30
+40
+60
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Custom function invocation in expression"
+/// FILE fileOne.logi
+SET @CALCULATE, {dest, x, y
+    SET dest, x + y * 2
+}
+PRINT CALCULATE(3, 4)
+PRINT CALCULATE(5, 6)
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+11
+17
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Malformed function invocation expression 1"
+/// FILE fileOne.logi
+SET @CALCULATE, {dest, x, y
+    SET dest, x + y * 2
+}
+PRINT CALCULATE(3, 4
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected ',' or ')'.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed function invocation expression 2"
+/// FILE fileOne.logi
+SET @CALCULATE, {dest, x, y
+    SET dest, x + y * 2
+}
+PRINT CALCULATE(3, 4,
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected expression.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Custom function create function handle"
+/// FILE fileOne.logi
+SET @MY_FUNC, {dest, value
+    SET @scalingFactor, value + 1
+    SET dest, {result, number
+        SET result, number * scalingFactor
+    }
+}
+MY_FUNC @MY_HANDLE, 9
+PRINT MY_HANDLE(3)
+PRINT MY_HANDLE(4)
+MY_FUNC @MY_HANDLE, 14
+PRINT MY_HANDLE(5)
+PRINT MY_HANDLE(6)
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+30
+40
+75
+90
+/// END
+/// EXPECT_EXIT_CODE 0
+
+
