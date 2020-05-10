@@ -1,0 +1,427 @@
+
+/// CASE "Built-in function missing argument"
+/// FILE fileOne.logi
+SET @myValue
+PRINT myValue
+PRINT
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+(Void)
+(Void)
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Built-in function too many arguments"
+/// FILE fileOne.logi
+PRINT 10, 20, 30
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught DATA_ERROR: Expected at most 1 argument.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Built-in function invalid destination"
+/// FILE fileOne.logi
+SET "Ouch oof", 5
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected value location.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "SET function"
+/// FILE fileOne.logi
+SET @myNumber, 5
+PRINT myNumber
+SET @myString, "Wowie zowie"
+PRINT myString
+SET @myList, SET([10, 20, 30])
+PRINT myList
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+5
+Wowie zowie
+[10, 20, 30]
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "TYPE function"
+/// FILE fileOne.logi
+TYPE @valueType, 99
+PRINT valueType
+PRINT TYPE("Hello")
+PRINT TYPE([10, 20, 30])
+PRINT TYPE(RESIZE)
+PRINT TYPE({
+})
+PRINT TYPE(VOID)
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+0
+1
+2
+3
+3
+4
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "CONVERT function"
+/// FILE fileOne.logi
+CONVERT @myValue, "99", NUMBER_TYPE
+PRINT myValue
+PRINT TYPE(myValue)
+CONVERT myValue, 99, STRING_TYPE
+PRINT myValue
+PRINT TYPE(myValue)
+PRINT CONVERT(VOID, STRING_TYPE)
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+99
+0
+99
+1
+(Void)
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "CONVERT function invalid type 1"
+/// FILE fileOne.logi
+PRINT CONVERT(99, 99)
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught NUMBER_ERROR: Invalid type constant.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "CONVERT function invalid type 2"
+/// FILE fileOne.logi
+PRINT CONVERT(99, "Yuck")
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Type must be a number.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "CONVERT function invalid type 3"
+/// FILE fileOne.logi
+PRINT CONVERT(99, VOID_TYPE)
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Cannot convert value to void.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "SIZE function"
+/// FILE fileOne.logi
+SIZE @valueSize, "Hello"
+PRINT valueSize
+PRINT SIZE("")
+PRINT SIZE([10, 20, 30])
+PRINT SIZE([40])
+PRINT SIZE([])
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+5
+0
+3
+1
+0
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "SIZE function invalid value"
+/// FILE fileOne.logi
+PRINT SIZE(99)
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Value must be a sequence.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "RESIZE function"
+/// FILE fileOne.logi
+SET @myValue, "Hello, world!"
+RESIZE myValue, 20
+PRINT myValue + "|"
+RESIZE myValue, 5
+PRINT myValue + "|"
+SET myValue, [10, 20, 30, 40, 50]
+RESIZE myValue, 8
+PRINT myValue
+RESIZE myValue, 3
+PRINT myValue
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Hello, world!       |
+Hello|
+[10, 20, 30, 40, 50, (Void), (Void), (Void)]
+[10, 20, 30]
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "RESIZE function invalid value"
+/// FILE fileOne.logi
+SET @myValue, VOID
+RESIZE myValue, 10
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Value must be a sequence.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "RESIZE function invalid size 1"
+/// FILE fileOne.logi
+SET @myValue, [10, 20, 30]
+RESIZE myValue, VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Size must be a number.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "RESIZE function invalid size 2"
+/// FILE fileOne.logi
+SET @myValue, [10, 20, 30]
+RESIZE myValue, -3
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught NUMBER_ERROR: Size must be non-negative.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "IF function"
+/// FILE fileOne.logi
+IF TRUE, {
+    PRINT 1
+    IF FALSE, {
+        PRINT 2
+    }
+    IF TRUE, {
+        PRINT 3
+    }
+}
+IF FALSE, {
+    PRINT 4
+    IF FALSE, {
+        PRINT 5
+    }
+    IF TRUE, {
+        PRINT 6
+    }
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+1
+3
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "IF function invalid condition"
+/// FILE fileOne.logi
+IF VOID, {
+    PRINT 1
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Condition must be a number.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "IF function invalid function handle"
+/// FILE fileOne.logi
+IF TRUE, VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected function handle.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "LOOP function"
+/// FILE fileOne.logi
+SET @x, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF x > 50, {
+            THROW 1
+        }
+        PRINT x
+        SET x, x + 10
+    }
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+0
+10
+20
+30
+40
+50
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "LOOP function invalid function handle"
+/// FILE fileOne.logi
+LOOP VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected function handle.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "THROW function"
+/// FILE fileOne.logi
+THROW 10, "This is an error message"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught value (channel = 10): This is an error message
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "THROW function invalid channel"
+/// FILE fileOne.logi
+THROW VOID, "This is an error message"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Channel must be a number.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "CATCH function"
+/// FILE fileOne.logi
+CATCH @myError, 10, {
+    THROW 10, "I am an error!"
+}
+PRINT myError
+CATCH @myError, 10, {
+    PRINT "No error here!"
+}
+PRINT myError
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am an error!
+No error here!
+(Void)
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "CATCH function uncaught value"
+/// FILE fileOne.logi
+CATCH @myError, 10, {
+    THROW 20, "I'm the gingerbread man"
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught value (channel = 20): I'm the gingerbread man
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "CATCH function invalid channel"
+/// FILE fileOne.logi
+CATCH @myError, VOID, {
+    PRINT "Hello, world!"
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Channel must be a number.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "CATCH function invalid function handle"
+/// FILE fileOne.logi
+CATCH @myError, 10, VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected function handle.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "PRINT function"
+/// FILE fileOne.logi
+PRINT 99
+PRINT "Hello"
+PRINT [10, 20, 30]
+PRINT RESIZE
+PRINT {
+}
+PRINT VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+99
+Hello
+[10, 20, 30]
+(Function)
+(Function)
+(Void)
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "PROMPT function"
+/// FILE fileOne.logi
+PRINT "Enter your name:"
+PROMPT @name
+PRINT "Hello, " + name
+PRINT "Enter a number:"
+CONVERT @myNumber, PROMPT(), NUMBER_TYPE
+PRINT myNumber * 2
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Enter your name:
+/// END
+/// PROVIDE_INPUT "Cool Dude"
+/// EXPECT_OUTPUT
+Hello, Cool Dude
+Enter a number:
+/// END
+/// PROVIDE_INPUT "123"
+/// EXPECT_OUTPUT
+246
+/// END
+/// EXPECT_EXIT_CODE 0
+
+
