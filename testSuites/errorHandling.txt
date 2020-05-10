@@ -1,0 +1,144 @@
+
+/// CASE "Throw string"
+/// FILE fileOne.logi
+PRINT "I am going to throw a value"
+PRINT "Here we go..."
+THROW 1, "Ouch oof my bones"
+PRINT "We should not reach this statement"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am going to throw a value
+Here we go...
+Uncaught value (channel = 1): Ouch oof my bones
+/// END
+/// EXPECT_TRACE_POS 3 fileOne.logi
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Throw from function 1"
+/// FILE fileOne.logi
+SET @MY_FUNC, {
+    THROW 1, "PC LOAD LETTER"
+}
+MY_FUNC
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught value (channel = 1): PC LOAD LETTER
+/// END
+/// EXPECT_TRACE_POS 2 fileOne.logi
+/// EXPECT_TRACE_POS 4 fileOne.logi
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Throw from function 2"
+/// FILE fileOne.logi
+SET @MY_FUNC, {dest
+    THROW 1, "Low on magenta ink"
+}
+PRINT MY_FUNC()
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught value (channel = 1): Low on magenta ink
+/// END
+/// EXPECT_TRACE_POS 2 fileOne.logi
+/// EXPECT_TRACE_POS 4 fileOne.logi
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Throw built-in error"
+/// FILE fileOne.logi
+THROW 0, [STATE_ERROR, "Too nervous"]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught STATE_ERROR: Too nervous
+/// END
+/// EXPECT_TRACE_POS 1 fileOne.logi
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Catch built-in error"
+/// FILE fileOne.logi
+CATCH @error, 0, {
+    PRINT 1 / 0
+}
+PRINT error
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+[2, Division by zero.]
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Built-in error channel with unknown error number"
+/// FILE fileOne.logi
+THROW 0, [99, "Unfavorable economic conditions"]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught error (code = 99): Unfavorable economic conditions
+/// END
+/// EXPECT_TRACE_POS 1 fileOne.logi
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Built-in error channel with unexpected data structure"
+/// FILE fileOne.logi
+THROW 0, "REALLY NOT FEELIN UP TO IT RIGHT NOW. SORRY."
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught value (channel = 0): REALLY NOT FEELIN UP TO IT RIGHT NOW. SORRY.
+/// END
+/// EXPECT_TRACE_POS 1 fileOne.logi
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Rethrow value"
+/// FILE fileOne.logi
+CATCH @error, 1, {
+    THROW 1, "lp0 on fire"
+}
+THROW 1, error
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught value (channel = 1): lp0 on fire
+/// END
+/// EXPECT_TRACE_POS 2 fileOne.logi
+/// EXPECT_TRACE_POS 4 fileOne.logi
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Throw different value"
+/// FILE fileOne.logi
+CATCH @error, 1, {
+    THROW 1, "HECK NO"
+}
+THROW 1, "HECK NO"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught value (channel = 1): HECK NO
+/// END
+/// EXPECT_TRACE_POS 4 fileOne.logi
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Pass through catch"
+/// FILE fileOne.logi
+CATCH @error, 3, {
+    CATCH @error, 2, {
+        CATCH @error, 1, {
+            THROW 3, "Saving game, do not unplug memory card"
+        }
+        PRINT 10
+    }
+    PRINT 20
+}
+PRINT 30
+PRINT error
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+30
+Saving game, do not unplug memory card
+/// END
+/// EXPECT_EXIT_CODE 0
+
+

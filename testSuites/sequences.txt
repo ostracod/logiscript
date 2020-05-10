@@ -1,0 +1,232 @@
+
+/// CASE "Read sequence elements"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+SET @myList, [10, 20, 30, 40, 50]
+PRINT myString[0]
+PRINT myString[2]
+PRINT myString[4]
+PRINT myList[0]
+PRINT myList[2]
+PRINT myList[4]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+65
+67
+69
+10
+30
+50
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Write sequence elements"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+SET @myList, [10, 20, 30, 40, 50]
+SET myString[0], 97
+PRINT myString
+SET myString[2], 111
+PRINT myString
+SET myString[4], 101
+PRINT myString
+SET myList[0], 100
+PRINT myList
+SET myList[2], 99
+PRINT myList
+SET myList[4], 98
+PRINT myList
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+aBCDE
+aBoDE
+aBoDe
+[100, 20, 30, 40, 50]
+[100, 20, 99, 40, 50]
+[100, 20, 99, 40, 98]
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Malformed index operator 1"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+PRINT myString[
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected expression.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed index operator 2"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+PRINT myString[1
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected ']'.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Index operator type error 1"
+/// FILE fileOne.logi
+PRINT VOID[1]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected sequence value.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Index operator type error 2"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+PRINT myString[VOID]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected number value.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Index operator invalid string index 1"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+PRINT myString[99]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught NUMBER_ERROR: Index is out of bounds.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Index operator invalid string index 2"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+PRINT myString[-1]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught NUMBER_ERROR: Index is out of bounds.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Index operator invalid string index 3"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+SET myString[99], 100
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught NUMBER_ERROR: Index is out of bounds.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Index operator invalid list index"
+/// FILE fileOne.logi
+SET @myList, [10, 20, 30, 40, 50]
+PRINT myList[99]
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught NUMBER_ERROR: Index is out of bounds.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Index operator invalid character value"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+SET myString[1], VOID
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected number value.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Pass string element by reference"
+/// FILE fileOne.logi
+SET @myString, "ABCDE"
+SET @MY_FUNC_1, {value
+    PRINT value + 1000
+}
+MY_FUNC_1 myString[1]
+MY_FUNC_1 myString[3]
+SET @MY_FUNC_2, {dest, value
+    SET dest, value - 1000
+}
+MY_FUNC_2 myString[1], 1120
+PRINT myString
+MY_FUNC_2 myString[3], 1121
+PRINT myString
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+1066
+1068
+AxCDE
+AxCyE
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Pass list element by reference"
+/// FILE fileOne.logi
+SET @myList, [10, 20, 30, 40, 50]
+SET @MY_FUNC_1, {value
+    PRINT value * 100
+}
+MY_FUNC_1 myList[1]
+MY_FUNC_1 myList[3]
+SET @MY_FUNC_2, {dest, value
+    SET dest, value * 100
+}
+MY_FUNC_2 myList[1], 60
+PRINT myList
+MY_FUNC_2 myList[3], 70
+PRINT myList
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+2000
+4000
+[10, 6000, 30, 40, 50]
+[10, 6000, 30, 7000, 50]
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Index out of bounds in function handle"
+/// FILE fileOne.logi
+SET @myList, [10, 20, 30, 40, 50]
+SET @MY_FUNC, {dest, value
+    SET dest, {
+        PRINT value * 100
+    }
+}
+MY_FUNC @MY_HANDLE, myList[2]
+MY_HANDLE
+RESIZE myList, 2
+PRINT "I do not have an error yet"
+MY_HANDLE
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+3000
+I do not have an error yet
+Uncaught NUMBER_ERROR: Index is out of bounds.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+
