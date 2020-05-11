@@ -141,4 +141,24 @@ Saving game, do not unplug memory card
 /// END
 /// EXPECT_EXIT_CODE 0
 
+/// CASE "Throw in imported script"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$() "./fileTwo.logi"
+PRINT "All done importing!"
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+THROW 1, "Too sleepy"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+Uncaught value (channel = 1): Too sleepy
+/// END
+/// EXPECT_TRACE_POS 2 fileTwo.logi
+/// EXPECT_TRACE_POS 2 fileOne.logi
+/// EXPECT_EXIT_CODE 1
+
 

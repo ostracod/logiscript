@@ -1,5 +1,27 @@
 
-/// CASE "No garbage collection"
+/// CASE "No garbage collection string in variable"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, "I am garbage"
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 3
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MINIMUM_HEAP_COUNT 270
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "No garbage collection list in variable"
 /// FILE fileOne.logi
 SET @count, 0
 CATCH @bupkis, 1, {
@@ -18,10 +40,57 @@ PRINT count
 /// EXPECT_OUTPUT
 100
 /// END
-/// EXPECT_MINIMUM_HEAP_COUNT 80
+/// EXPECT_MINIMUM_HEAP_COUNT 270
 /// EXPECT_EXIT_CODE 0
 
-/// CASE "Only mark and sweep"
+/// CASE "No garbage collection function in variable"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, [10, 20, 30]
+        SET @y, {
+            PRINT x[1]
+        }
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 3
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MINIMUM_HEAP_COUNT 360
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep string in variable"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, "I am garbage"
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep list in variable"
 /// FILE fileOne.logi
 SET @count, 0
 CATCH @bupkis, 1, {
@@ -40,7 +109,538 @@ PRINT count
 /// EXPECT_OUTPUT
 100
 /// END
-/// EXPECT_MAXIMUM_HEAP_COUNT 80
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep function in variable"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, [10, 20, 30]
+        SET @y, {
+            PRINT x[1]
+        }
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep nested list"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, [10, 20, [30, 40]]
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep list cycle"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, [10, 20, 30]
+        SET @y, [40, 50, x]
+        SET x[2], y
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep big list of lists 1"
+/// FILE fileOne.logi
+SET @x, []
+RESIZE x, 100
+SET @index, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF index >= 100, {
+            THROW 1
+        }
+        SET x[index], [10, 20]
+        SET index, index + 1
+    }
+}
+PRINT index
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MINIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep big list of lists 2"
+/// FILE fileOne.logi
+SET @x, []
+RESIZE x, 100
+SET @index, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF index >= 100, {
+            THROW 1
+        }
+        SET x[index], [10, 20]
+        SET index, index + 1
+    }
+}
+SET x, VOID
+PRINT index
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep big list of functions 1"
+/// FILE fileOne.logi
+SET @x, []
+RESIZE x, 100
+SET @index, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF index >= 100, {
+            THROW 1
+        }
+        SET @y, [10, 20]
+        SET @z, [30, 40]
+        SET x[index], {
+            PRINT y
+        }
+        SET index, index + 1
+    }
+}
+PRINT index
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MINIMUM_HEAP_COUNT 270
+/// EXPECT_MAXIMUM_HEAP_COUNT 360
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep big list of functions 2"
+/// FILE fileOne.logi
+SET @x, []
+RESIZE x, 100
+SET @index, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF index >= 100, {
+            THROW 1
+        }
+        SET @y, [10, 20]
+        SET @z, [30, 40]
+        SET x[index], {
+            PRINT y
+        }
+        SET index, index + 1
+    }
+}
+SET x, VOID
+PRINT index
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep list in various contexts"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SIZE @x, [10, 20, [30, 40]]
+        SET x, SIZE([10, 20, 30])
+        SET x, [10, 20, 30][1]
+        {sequence
+            SET x, sequence[1]
+        } [10, 20, 30]
+        SET x, [10, 20, 30] == [10, 20, 30]
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Mark and sweep string in import"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        $() "./fileTwo.logi"
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// FILE fileTwo.logi
+SET @x, 99
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count string in variable"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, "I am garbage"
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count list in variable"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, [10, 20, 30]
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count function in variable 1"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, [10, 20, 30]
+        SET @y, {
+            PRINT x[1]
+        }
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MINIMUM_HEAP_COUNT 270
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count function in variable 2"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, [10, 20, 30]
+        SET @y, {
+            PRINT x[1]
+        }
+        SET y, VOID
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count nested list"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, [10, 20, [30, 40]]
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count list cycle"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SET @x, [10, 20, 30]
+        SET @y, [40, 50, x]
+        SET x[2], y
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MINIMUM_HEAP_COUNT 180
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count big list of lists 1"
+/// FILE fileOne.logi
+SET @x, []
+RESIZE x, 100
+SET @index, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF index >= 100, {
+            THROW 1
+        }
+        SET x[index], [10, 20]
+        SET index, index + 1
+    }
+}
+PRINT index
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MINIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count big list of lists 2"
+/// FILE fileOne.logi
+SET @x, []
+RESIZE x, 100
+SET @index, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF index >= 100, {
+            THROW 1
+        }
+        SET x[index], [10, 20]
+        SET index, index + 1
+    }
+}
+SET x, VOID
+PRINT index
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count big list of functions 1"
+/// FILE fileOne.logi
+SET @x, []
+RESIZE x, 100
+SET @index, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF index >= 100, {
+            THROW 1
+        }
+        SET @y, [10, 20]
+        SET @z, [30, 40]
+        SET x[index], {
+            PRINT y
+        }
+        SET index, index + 1
+    }
+}
+PRINT index
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MINIMUM_HEAP_COUNT 360
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count big list of functions 2"
+/// FILE fileOne.logi
+SET @x, []
+RESIZE x, 100
+SET @index, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF index >= 100, {
+            THROW 1
+        }
+        SET @y, [10, 20]
+        SET @z, [30, 40]
+        SET x[index], {
+            PRINT y
+        }
+        SET index, index + 1
+    }
+}
+SET x, VOID
+PRINT index
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count list in various contexts"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        SIZE @x, [10, 20, [30, 40]]
+        SET x, SIZE([10, 20, 30])
+        SET x, [10, 20, 30][1]
+        {sequence
+            SET x, sequence[1]
+        } [10, 20, 30]
+        SET x, [10, 20, 30] == [10, 20, 30]
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count string in import"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        $() "./fileTwo.logi"
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// FILE fileTwo.logi
+SET @x, 99
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
 /// EXPECT_EXIT_CODE 0
 
 

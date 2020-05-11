@@ -109,6 +109,23 @@ SET @SET_X, {value
 /// END
 /// EXPECT_EXIT_CODE 0
 
+/// CASE "Import from directory"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$() "./testDirectory/fileFour.logi"
+PRINT "All done importing!"
+/// END
+/// FILE testDirectory/fileFour.logi
+PRINT "I am fileFour!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileFour!
+All done importing!
+/// END
+/// EXPECT_EXIT_CODE 0
+
 /// CASE "Import same script twice"
 /// FILE fileOne.logi
 PRINT "I am fileOne!"
