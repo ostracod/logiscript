@@ -432,7 +432,7 @@ heapValue_t *functionHandleCreateFrame(customFunctionHandle_t *functionHandle) {
 }
 
 // If frameDestination is null, then no frame will be stored.
-// If frameDestination not null, the frame will be locked.
+// If frameDestination is not null, the frame will be locked.
 void invokeFunctionHandle(
     heapValue_t **frameDestination,
     heapValue_t *functionHandle,
@@ -442,6 +442,7 @@ void invokeFunctionHandle(
     customFunction_t *customFunction = tempHandle->function;
     checkInvocationArgumentList(&(customFunction->base), &argumentList);
     if (hasThrownError) {
+        *frameDestination = NULL;
         return;
     }
     heapValue_t *tempFrame = functionHandleCreateFrame(tempHandle);
@@ -496,7 +497,9 @@ hyperValue_t invokeFunction(
             output = getFrameVariableLocation(tempFrame, 0);
             lockHyperValue(&output);
         }
-        unlockHeapValue(tempFrame);
+        if (tempFrame != NULL) {
+            unlockHeapValue(tempFrame);
+        }
         return output;
     }
     THROW_BUILT_IN_ERROR(TYPE_ERROR_CONSTANT, "Expected function handle.");

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <libgen.h>
+#include <unistd.h>
 #include "utilities.h"
 #include "vector.h"
 #include "script.h"
@@ -48,12 +49,29 @@ script_t *importScript(int8_t *moduleDirectory, int8_t *scriptPath) {
     // Resolve script absolute path.
     int8_t *absolutePath;
     if (scriptPath[0] == '/') {
+        if(access((char *)scriptPath, F_OK) != -1) {
+            THROW_BUILT_IN_ERROR(
+                STATE_ERROR_CONSTANT,
+                "Could not find script at %s.",
+                scriptPath
+            );
+            return NULL;
+        }
         absolutePath = mallocText(scriptPath);
     } else {
         int8_t *tempPath;
         // Note: POSIX treats double forward slash as a single slash.
         asprintf((char **)&tempPath, "%s/%s", moduleDirectory, scriptPath);
         absolutePath = mallocRealpath(tempPath);
+        if (absolutePath == NULL) {
+            THROW_BUILT_IN_ERROR(
+                STATE_ERROR_CONSTANT,
+                "Could not find script at %s.",
+                tempPath
+            );
+            free(tempPath);
+            return NULL;
+        }
         free(tempPath);
     }
     
@@ -115,11 +133,11 @@ script_t *importScript(int8_t *moduleDirectory, int8_t *scriptPath) {
     }
     
     // Run the script.
+    pushVectorElement(&scriptList, &output);
     evaluateScript(output);
     if (hasThrownError) {
         return NULL;
     }
-    pushVectorElement(&scriptList, &output);
     return output;
 }
 
@@ -128,10 +146,9 @@ void importEntryPointScript(int8_t *path) {
     if (tempPath == NULL) {
         THROW_BUILT_IN_ERROR(
             STATE_ERROR_CONSTANT,
-            "Could not read script at %s.",
+            "Could not find script at %s.",
             path
         );
-        free(tempPath);
         return;
     }
     int8_t *tempPath2 = mallocText(tempPath);

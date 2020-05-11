@@ -14,6 +14,23 @@ Uncaught TYPE_ERROR: Script must have ".logi" extension.
 /// EXPECT_ERROR_MESSAGE STATE_ERROR
 /// EXPECT_EXIT_CODE 1
 
+/// CASE "Import zero variables"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$() "./fileTwo.logi"
+PRINT "All done importing!"
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+All done importing!
+/// END
+/// EXPECT_EXIT_CODE 0
+
 /// CASE "Import one variable"
 /// FILE fileOne.logi
 PRINT "I am fileOne!"
@@ -57,6 +74,410 @@ Here are the imported variables:
 10
 20
 30
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Modify imported variable"
+/// FILE fileOne.logi
+$(x, GET_X, SET_X) "./fileTwo.logi"
+PRINT x
+PRINT GET_X()
+SET x, 20
+PRINT x
+PRINT GET_X()
+SET_X 30
+PRINT x
+PRINT GET_X()
+/// END
+/// FILE fileTwo.logi
+SET @x, 10
+SET @GET_X, {dest
+    SET dest, x
+}
+SET @SET_X, {value
+    SET x, value
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+10
+10
+20
+20
+30
+30
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Import same script twice"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$( x ) "./fileTwo.logi"
+$ (y) "./fileTwo.logi"
+PRINT "Here are the imported variables:"
+PRINT x
+PRINT y
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+SET @y, 20
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+Here are the imported variables:
+10
+20
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Import two scripts"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$() "./fileTwo.logi"
+$() "./fileThree.logi"
+PRINT "All done importing!"
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+/// END
+/// FILE fileThree.logi
+PRINT "I am fileThree!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+I am fileThree!
+All done importing!
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Import chain"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$() "./fileTwo.logi"
+PRINT "fileOne done importing!"
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+$() "./fileThree.logi"
+PRINT "fileTwo done importing!"
+/// END
+/// FILE fileThree.logi
+PRINT "I am fileThree!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+I am fileThree!
+fileTwo done importing!
+fileOne done importing!
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Circular import"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+SET @x, 10
+$(y) "./fileTwo.logi"
+PRINT "fileOne done importing!"
+PRINT y
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @y, 20
+$(x) "./fileOne.logi"
+PRINT "fileTwo done importing!"
+PRINT x
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+fileTwo done importing!
+10
+fileOne done importing!
+20
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Malformed variable import 1"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$( "./fileTwo.logi"
+PRINT "All done importing!"
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+SET @y, 20
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected identifier.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed variable import 2"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$(x, ) "./fileTwo.logi"
+PRINT "All done importing!"
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+SET @y, 20
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected identifier.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Missing import variable"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$(z) "./fileTwo.logi"
+PRINT "All done importing!"
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+SET @y, 20
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+Uncaught PARSE_ERROR: Could not find "z" in imported script.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Import path type error"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$() VOID
+PRINT "All done importing!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+Uncaught TYPE_ERROR: Expected string value.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Missing import script file"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$() "./bupkis.logi"
+PRINT "All done importing!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+/// END
+/// EXPECT_ERROR_MESSAGE STATE_ERROR
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Imported variable is global"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+{
+    $(x) "./fileTwo.logi"
+    PRINT x
+}
+PRINT x
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+10
+10
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Do not allow overriding imported variable"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$(x) "./fileTwo.logi"
+SET @x, 20
+PRINT x
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Duplicate variable "x".
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Import namespace"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$MY_NAMESPACE "./fileTwo.logi"
+PRINT "Here are variables in the namespace:"
+PRINT MY_NAMESPACE.x
+PRINT MY_NAMESPACE.y
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+SET @y, 20
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+Here are variables in the namespace:
+10
+20
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Modify variable in namespace"
+/// FILE fileOne.logi
+$MY_NAMESPACE "./fileTwo.logi"
+PRINT MY_NAMESPACE.x
+PRINT MY_NAMESPACE.GET_X()
+SET MY_NAMESPACE.x, 20
+PRINT MY_NAMESPACE.x
+PRINT MY_NAMESPACE.GET_X()
+MY_NAMESPACE.SET_X 30
+PRINT MY_NAMESPACE.x
+PRINT MY_NAMESPACE.GET_X()
+/// END
+/// FILE fileTwo.logi
+SET @x, 10
+SET @GET_X, {dest
+    SET dest, x
+}
+SET @SET_X, {value
+    SET x, value
+}
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+10
+10
+20
+20
+30
+30
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Invalid namespace identifier"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$99 "./fileTwo.logi"
+PRINT "All done importing!"
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected identifier.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Invalid namespace identifier"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$MY_NAMESPACE "./fileTwo.logi"
+PRINT MY_NAMESPACE.(1 + 2)
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected identifier.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Missing variable in namespace"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$MY_NAMESPACE "./fileTwo.logi"
+PRINT MY_NAMESPACE.z
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+Uncaught PARSE_ERROR: Could not find "z" in imported script.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Imported namespace is global"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+{
+    $MY_NAMESPACE "./fileTwo.logi"
+    PRINT MY_NAMESPACE.x
+}
+PRINT MY_NAMESPACE.x
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+10
+10
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Use variable for import path"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+SET @path1, "./fileTwo.logi"
+SET @path2, "./fileThree.logi"
+$() path1
+$MY_NAMESPACE path2
+PRINT "All done importing!"
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+/// END
+/// FILE fileThree.logi
+PRINT "I am fileThree!"
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+I am fileThree!
+All done importing!
 /// END
 /// EXPECT_EXIT_CODE 0
 
