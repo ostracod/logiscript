@@ -23,6 +23,27 @@ Very cool
 /// END
 /// EXPECT_EXIT_CODE 0
 
+/// CASE "Resolve variable in several contexts"
+/// FILE fileOne.logi
+SET @x, 2
+PRINT x
+PRINT -x
+PRINT x + 1
+PRINT [10, x, 30]
+PRINT [10, 20, 30, 40][x]
+PRINT SET(x)
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+2
+-2
+3
+[10, 2, 30]
+30
+2
+/// END
+/// EXPECT_EXIT_CODE 0
+
 /// CASE "Variable in custom function"
 /// FILE fileOne.logi
 SET @x, 10

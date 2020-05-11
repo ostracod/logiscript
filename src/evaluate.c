@@ -103,6 +103,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
         {
             constantExpression_t *constantExpression = (constantExpression_t *)expression;
             output.value = copyValue(constantExpression->value);
+            lockHyperValue(&output);
             break;
         }
         case EXPRESSION_TYPE_LIST:
@@ -133,6 +134,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
             addValueReferencesInVector(&tempValueList);
             unlockValuesInVector(&tempValueList);
             output.value = createValueFromHeapValue(tempHeapValue);
+            lockHyperValue(&output);
             break;
         }
         case EXPRESSION_TYPE_VARIABLE:
@@ -148,6 +150,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                 tempFrame = frame;
             }
             output = getFrameVariableLocation(tempFrame, tempScopeIndex);
+            lockHyperValue(&output);
             break;
         }
         case EXPRESSION_TYPE_UNARY:
@@ -162,6 +165,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                 return output;
             }
             output.value = calculateUnaryOperator(tempOperator, tempOperand);
+            lockHyperValue(&output);
             unlockValue(&tempOperand);
             break;
         }
@@ -185,6 +189,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                 return output;
             }
             output.value = calculateBinaryOperator(tempOperator, tempOperand1, tempOperand2);
+            lockHyperValue(&output);
             unlockValue(&tempOperand1);
             unlockValue(&tempOperand2);
             break;
@@ -196,6 +201,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                 ((customFunctionExpression_t *)expression)->customFunction
             );
             output.value = createValueFromHeapValue(tempHandle);
+            lockHyperValue(&output);
             break;
         }
         case EXPRESSION_TYPE_INDEX:
@@ -217,6 +223,7 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
                 return output;
             }
             output = accessSequenceElement(sequenceValue, indexValue);
+            lockHyperValue(&output);
             unlockValue(&sequenceValue);
             unlockValue(&indexValue);
             break;
@@ -224,19 +231,20 @@ hyperValue_t evaluateExpression(heapValue_t *frame, baseExpression_t *expression
         case EXPRESSION_TYPE_INVOCATION:
         {
             invocationExpression_t *invocationExpression = (invocationExpression_t *)expression;
-            return invokeFunctionWithExpressions(
+            output = invokeFunctionWithExpressions(
                 frame,
                 invocationExpression->function,
                 &(invocationExpression->argumentList),
                 true
             );
+            // output is already locked here.
+            break;
         }
         default:
         {
             break;
         }
     }
-    lockHyperValue(&output);
     return output;
 }
 

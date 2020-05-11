@@ -1,0 +1,63 @@
+
+/// CASE "Script with bad extension"
+/// FILE fileOne.txt
+PRINT "Hello, world!"
+/// END
+/// RUN fileOne.txt
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Script must have ".logi" extension.
+/// END
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Missing script"
+/// RUN bupkis.logi
+/// EXPECT_ERROR_MESSAGE STATE_ERROR
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Import one variable"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$(x) "./fileTwo.logi"
+PRINT "Here is the imported variable:"
+PRINT x
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+Here is the imported variable:
+10
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Import several variables"
+/// FILE fileOne.logi
+PRINT "I am fileOne!"
+$(x, y, z) "./fileTwo.logi"
+PRINT "Here are the imported variables:"
+PRINT x
+PRINT y
+PRINT z
+/// END
+/// FILE fileTwo.logi
+PRINT "I am fileTwo!"
+SET @x, 10
+SET @y, 20
+SET @z, 30
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+I am fileOne!
+I am fileTwo!
+Here are the imported variables:
+10
+20
+30
+/// END
+/// EXPECT_EXIT_CODE 0
+
+

@@ -17,6 +17,7 @@ if (process.argv.length < 3 || process.argv.length > 4) {
 let socketPath = pathUtils.join(__dirname, "testSocket");
 let testSuiteDirectory = pathUtils.join(__dirname, "testSuites");
 let testModuleDirectory = pathUtils.join(__dirname, "testModule");
+let errorMessageRegex = /^Uncaught (.+): (.+)$/;
 let tracePosRegex = /^From line (\d+) of (.+)$/;
 
 let interpreterPath = process.argv[2];
@@ -279,7 +280,7 @@ class RuntimeAction {
 
 class ReadLineAction extends RuntimeAction {
     
-    constructor(expectedText) {
+    constructor() {
         super();
         this.receivedText = null;
     }
@@ -295,6 +296,16 @@ class ReadLineAction extends RuntimeAction {
             }
         });
     }
+    
+    getFailureMessage() {
+        let output = this.getExpectedTextDescription();
+        if (this.receivedText === null) {
+            output += ", did not receive message.";
+        } else {
+            output += ", received:\n" + this.receivedText;
+        }
+        return output;
+    }
 }
 
 class ExpectOutputAction extends ReadLineAction {
@@ -308,12 +319,31 @@ class ExpectOutputAction extends ReadLineAction {
         this.hasSucceeded = (this.expectedText === this.receivedText);
     }
     
-    getFailureMessage() {
-        if (this.receivedText === null) {
-            return `Expected stdout "${this.expectedText}", did not receive message.`;
-        } else {
-            return `Expected stdout "${this.expectedText}", received "${this.receivedText}".`;
+    getExpectedTextDescription() {
+        return `Expected stdout "${this.expectedText}"`;
+    }
+}
+
+class ExpectErrorMessageAction extends ReadLineAction {
+    
+    constructor(expectedErrorName) {
+        super();
+        this.expectedErrorName = expectedErrorName;
+        this.receivedErrorName = null;
+    }
+    
+    checkReceivedText() {
+        let tempResult = this.receivedText.match(errorMessageRegex);
+        if (tempResult === null) {
+            this.hasSucceeded = false;
+            return;
         }
+        this.receivedErrorName = tempResult[1];
+        this.hasSucceeded = (this.expectedErrorName === this.receivedErrorName);
+    }
+    
+    getExpectedTextDescription() {
+        return `Expected ${this.expectedErrorName} error message`;
     }
 }
 
@@ -339,14 +369,8 @@ class ExpectTracePosAction extends ReadLineAction {
             && this.expectedPath === this.receivedPath);
     }
     
-    getFailureMessage() {
-        let output = `Expected stack trace pos on line ${this.expectedLineNumber} of ${this.expectedPath}, `;
-        if (this.receivedText === null) {
-            output += "did not receive message.";
-        } else {
-            output += "received:\n" + this.receivedText;
-        }
-        return output;
+    getExpectedTextDescription() {
+        return `Expected stack trace pos on line ${this.expectedLineNumber} of ${this.expectedPath}`;
     }
 }
 
@@ -555,6 +579,12 @@ class TestSuite {
                 case "PROVIDE_INPUT":
                 {
                     let tempAction = new ProvideInputAction(tempDirective[1]);
+                    currentTestCase.runtimeActionList.push(tempAction);
+                    break;
+                }
+                case "EXPECT_ERROR_MESSAGE":
+                {
+                    let tempAction = new ExpectErrorMessageAction(tempDirective[1]);
                     currentTestCase.runtimeActionList.push(tempAction);
                     break;
                 }
