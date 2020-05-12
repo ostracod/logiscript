@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <inttypes.h>
 #include "utilities.h"
 #include "error.h"
 #include "resolve.h"
@@ -140,7 +141,7 @@ void printStackTrace() {
     }
     for (int32_t index = 0; index < stackTracePosIndex; index++) {
         stackTracePos_t *tempPos = stackTracePosList + index;
-        printf("From line %lld of %s\n", tempPos->lineNumber, tempPos->path);
+        printf("From line %" PRId64 " of %s\n", tempPos->lineNumber, tempPos->path);
     }
 }
 

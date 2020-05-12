@@ -1,6 +1,8 @@
 
 # LogiScript
 
+**Version 1.0.0**
+
 A scripting language by Jack Eisenmann
 
 ## Design Goals
@@ -8,6 +10,15 @@ A scripting language by Jack Eisenmann
 * Very cute
 * Adorable
 * Maybe actually useful
+
+## Installation
+
+LogiScript is compatible with Linux and macOS. To compile and install:
+
+```
+make
+sudo make install
+```
 
 ## Data Types
 

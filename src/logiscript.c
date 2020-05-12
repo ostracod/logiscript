@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <inttypes.h>
 #include "utilities.h"
 #include "vector.h"
 #include "script.h"
@@ -12,7 +13,7 @@
 #include "value.h"
 
 void printUsage() {
-    printf("Usage:\nlogiscript [file path]\n");
+    printf("Usage:\nlogiscript [file path]\nlogiscript --version");
 }
 
 int main(int argc, const char *argv[]) {
@@ -50,6 +51,10 @@ int main(int argc, const char *argv[]) {
     } else {
         isInSocketMode = false;
         scriptPath = (int8_t *)(argv[1]);
+        if (strcmp((char *)scriptPath, "--version") == 0) {
+            printf("1.0.0\n");
+            return 0;
+        }
     }
     hasThrownError = false;
     createEmptyVector(&scriptList, sizeof(script_t *));
@@ -57,7 +62,7 @@ int main(int argc, const char *argv[]) {
     importEntryPointScript(scriptPath);
     if (isInSocketMode) {
         int8_t *messageText;
-        asprintf((char **)&messageText, "heapCount %lld", getHeapAllocationCount());
+        asprintf((char **)&messageText, "heapCount %" PRId64, getHeapAllocationCount());
         writeTextToTestSocket(messageText);
         free(messageText);
     }

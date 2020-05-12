@@ -1,6 +1,6 @@
 
 CC = gcc
-CFLAGS = -Wall -c
+CFLAGS = -Wall -c -D _GNU_SOURCE
 LDFLAGS = -lm
 DIRBUILD = build
 DIRSRC = src

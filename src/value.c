@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <inttypes.h>
 #include "utilities.h"
 #include "value.h"
 #include "error.h"
@@ -619,7 +620,7 @@ void printAllHeapValues() {
     heapValue_t *tempHeapValue = firstHeapValue;
     while (tempHeapValue != NULL) {
         printf(
-            "    Type = %d; Lock depth = %d; Reference count = %lld\n",
+            "    Type = %d; Lock depth = %d; Reference count = %" PRId64 "\n",
             tempHeapValue->type,
             tempHeapValue->lockDepth,
             tempHeapValue->referenceCount
