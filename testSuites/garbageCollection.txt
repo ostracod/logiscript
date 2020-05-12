@@ -318,6 +318,30 @@ PRINT count
 /// EXPECT_MAXIMUM_HEAP_COUNT 90
 /// EXPECT_EXIT_CODE 0
 
+/// CASE "Mark and sweep thrown list"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        CATCH @x, 2, {
+            THROW 2, [10, 20, 30]
+        }
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 1
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
 /// CASE "Mark and sweep string in import"
 /// FILE fileOne.logi
 SET @count, 0
@@ -605,6 +629,30 @@ CATCH @bupkis, 1, {
             SET x, sequence[1]
         } [10, 20, 30]
         SET x, [10, 20, 30] == [10, 20, 30]
+        SET count, count + 1
+    }
+}
+PRINT count
+/// END
+/// GARBAGE_COLLECTION 2
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+100
+/// END
+/// EXPECT_MAXIMUM_HEAP_COUNT 90
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Reference count thrown list"
+/// FILE fileOne.logi
+SET @count, 0
+CATCH @bupkis, 1, {
+    LOOP {
+        IF count >= 100, {
+            THROW 1
+        }
+        CATCH @x, 2, {
+            THROW 2, [10, 20, 30]
+        }
         SET count, count + 1
     }
 }

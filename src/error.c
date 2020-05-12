@@ -60,6 +60,7 @@ void throwError(int32_t channel, value_t value) {
         vector_t *tempVector2 = &(thrownErrorValue.heapValue->vector);
         tempIsRethrow = (tempVector1 == tempVector2);
     }
+    unlockValue(&thrownErrorValue);
     thrownErrorChannel = channel;
     thrownErrorValue = value;
     lockValue(&value);

@@ -1,0 +1,51 @@
+#!/usr/local/bin/logiscript
+
+SET @ITERATE, {startIndex, endIndex, HANDLE
+    SET @index, startIndex
+    CATCH @temp, 1, {
+        LOOP {
+            IF index >= endIndex, {
+                THROW 1
+            }
+            HANDLE index
+            SET index, index + 1
+        }
+    }
+}
+
+SET @IS_IN_MANDELBROT, {dest, posX, posY
+    SET @firstPosX, posX
+    SET @firstPosY, posY
+    CATCH @temp, 2, {
+        ITERATE 0, 30, {count
+            SET @nextPosX, firstPosX + posX * posX - posY * posY
+            SET @nextPosY, firstPosY + 2 * posX * posY
+            SET posX, nextPosX
+            SET posY, nextPosY
+            IF posX < -3 || posX > 3 || posY < -3 || posY > 3, {
+                SET dest, FALSE
+                THROW 2
+            }
+        }
+        SET dest, TRUE
+    }
+}
+
+SET @windowWidth, 80
+SET @windowHeight, 30
+SET @line, ""
+RESIZE line, windowWidth
+ITERATE 0, windowHeight, {offsetY
+    ITERATE 0, windowWidth, {offsetX
+        SET @posX, (offsetX / windowWidth - 0.7) * 3
+        SET @posY, (offsetY / windowHeight - 0.5) * 2
+        SET @character, '.'
+        IF IS_IN_MANDELBROT(posX, posY), {
+            SET character, 'O'
+        }
+        SET line[offsetX], character
+    }
+    PRINT line
+}
+
+

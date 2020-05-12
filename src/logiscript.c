@@ -57,6 +57,7 @@ int main(int argc, const char *argv[]) {
         }
     }
     hasThrownError = false;
+    thrownErrorValue.type = VALUE_TYPE_VOID;
     createEmptyVector(&scriptList, sizeof(script_t *));
     initializeNumberConstants();
     importEntryPointScript(scriptPath);

@@ -312,7 +312,6 @@ void invokeBuiltInFunction(
                 if ((int32_t)(tempChannel.numberValue) == thrownErrorChannel) {
                     hasThrownError = false;
                     writeValueToLocation(tempDestination, thrownErrorValue);
-                    unlockValue(&thrownErrorValue);
                 }
             } else {
                 value_t tempValue;
