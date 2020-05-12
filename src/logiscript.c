@@ -13,7 +13,7 @@
 #include "value.h"
 
 void printUsage() {
-    printf("Usage:\nlogiscript [file path]\nlogiscript --version");
+    printf("Usage:\nlogiscript [file path]\nlogiscript --version\n");
 }
 
 int main(int argc, const char *argv[]) {
