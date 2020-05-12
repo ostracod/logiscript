@@ -1,0 +1,112 @@
+
+/// CASE "Function invocation statement"
+/// FILE fileOne.logi
+SIZE @myNumber, "Hello world!"
+PRINT myNumber
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+12
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Comments on dedicated lines"
+/// FILE fileOne.logi
+# Get the size of the string.
+SIZE @myNumber, "Hello world!"
+# Print the result.
+PRINT myNumber
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+12
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Comments after function invocation statements"
+/// FILE fileOne.logi
+SIZE @myNumber, "Hello world!" # Get the size of the string.
+PRINT myNumber # Print the result.
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+12
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Function invocation statement with line continuation"
+/// FILE fileOne.logi
+SIZE \
+    @myNumber, \
+    "Hello world!"
+PRINT \
+    myNumber
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+12
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Function invocation statement with custom function"
+/// FILE fileOne.logi
+{dest, text
+    SET dest, SIZE(text) * 2
+} @myNumber, "Hello world!"
+PRINT myNumber
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+24
+/// END
+/// EXPECT_EXIT_CODE 0
+
+/// CASE "Malformed function invocation statement 1"
+/// FILE fileOne.logi
+SIZE, @myNumber, "Hello world!"
+PRINT myNumber
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected expression.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed function invocation statement 2"
+/// FILE fileOne.logi
+SIZE @myNumber, "Hello world!",
+PRINT myNumber
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected expression.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Malformed function invocation statement 3"
+/// FILE fileOne.logi
+,SIZE @myNumber, "Hello world!"
+PRINT myNumber
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught PARSE_ERROR: Expected expression.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+/// CASE "Function invocation statement type error"
+/// FILE fileOne.logi
+99 @myNumber, "Hello world!"
+PRINT myNumber
+/// END
+/// RUN fileOne.logi
+/// EXPECT_OUTPUT
+Uncaught TYPE_ERROR: Expected function handle.
+/// END
+/// EXPECT_STACK_TRACE
+/// EXPECT_EXIT_CODE 1
+
+
