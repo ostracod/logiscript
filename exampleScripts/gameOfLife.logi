@@ -1,0 +1,85 @@
+#!/usr/local/bin/logiscript
+
+$(ITERATE, SWAP, IF_ELSE) "utils/nice.logi"
+$MATH "utils/math.logi"
+
+PRINT "Enter a seed for random number generation:"
+MATH.SEED_RAND CONVERT(PROMPT(), NUMBER_TYPE)
+
+SET @boardWidth, 40
+SET @boardHeight, 20
+SET @board, ""
+RESIZE board, (boardWidth + 1) * boardHeight - 1
+
+ITERATE 0, SIZE(board), {index
+    SET @character, '.'
+    IF MATH.RAND() > 150, {
+        SET character, 'O'
+    }
+    SET board[index], character
+}
+ITERATE 0, boardHeight - 1, {posY
+    SET board[(posY + 1) * (boardWidth + 1) - 1], '\n'
+}
+CONVERT @nextBoard, board, STRING_TYPE
+
+SET @CONVERT_POS_TO_INDEX, {dest, posX, posY
+    IF_ELSE posX < 0 || posX >= boardWidth || posY < 0 || posY >= boardHeight, {
+        SET dest, VOID
+    }, {
+        SET dest, posX + posY * (boardWidth + 1)
+    }
+}
+
+SET @UPDATE_CELL, {posX, posY
+    
+    CONVERT_POS_TO_INDEX @index, posX, posY
+    SET @count, 0
+    
+    SET @COUNT_NEIGHBOR, {offsetX, offsetY
+        CONVERT_POS_TO_INDEX @index, posX + offsetX, posY + offsetY
+        IF index != VOID, {
+            IF board[index] == 'O', {
+                SET count, count + 1
+            }
+        }
+    }
+    
+    COUNT_NEIGHBOR -1, -1
+    COUNT_NEIGHBOR 0, -1
+    COUNT_NEIGHBOR 1, -1
+    COUNT_NEIGHBOR -1, 0
+    COUNT_NEIGHBOR 1, 0
+    COUNT_NEIGHBOR -1, 1
+    COUNT_NEIGHBOR 0, 1
+    COUNT_NEIGHBOR 1, 1
+    
+    SET @character, '.'
+    IF_ELSE board[index] == 'O', {
+        IF count == 2 || count == 3, {
+            SET character, 'O'
+        }
+    }, {
+        IF count == 3, {
+            SET character, 'O'
+        }
+    }
+    SET nextBoard[index], character
+}
+
+SET @ADVANCE_BOARD, {
+    ITERATE 0, boardHeight, {posY
+        ITERATE 0, boardWidth, {posX
+            UPDATE_CELL posX, posY
+        }
+    }
+    SWAP board, nextBoard
+}
+
+LOOP {
+    PRINT board
+    PROMPT @temp
+    ADVANCE_BOARD
+}
+
+

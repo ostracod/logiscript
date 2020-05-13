@@ -1,0 +1,26 @@
+
+SET @ITERATE, {startIndex, endIndex, HANDLE
+    SET @index, startIndex
+    CATCH @temp, 1, {
+        LOOP {
+            IF index >= endIndex, {
+                THROW 1
+            }
+            HANDLE index
+            SET index, index + 1
+        }
+    }
+}
+
+SET @SWAP, {value1, value2
+    SET @tempValue, value1
+    SET value1, value2
+    SET value2, tempValue
+}
+
+SET @IF_ELSE, {condition, handle1, handle2
+    IF condition, handle1
+    IF !condition, handle2
+}
+
+

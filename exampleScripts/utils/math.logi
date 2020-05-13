@@ -1,0 +1,22 @@
+
+$(ITERATE) "utils/nice.logi"
+
+SET @randState
+
+SET @SEED_RAND, {seed
+    SET randState, seed
+}
+
+# Source: http://users.ece.cmu.edu/~koopman/lfsr/index.html
+SET @RAND, {dest
+    ITERATE 0, 8, {count
+        SET @tempBit, randState & 1
+        SET randState, randState >> 1
+        IF tempBit, {
+            SET randState, randState ^ 2147486001
+        }
+    }
+    SET dest, randState & 255
+}
+
+

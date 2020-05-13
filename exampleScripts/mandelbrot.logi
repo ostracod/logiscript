@@ -1,17 +1,6 @@
 #!/usr/local/bin/logiscript
 
-SET @ITERATE, {startIndex, endIndex, HANDLE
-    SET @index, startIndex
-    CATCH @temp, 1, {
-        LOOP {
-            IF index >= endIndex, {
-                THROW 1
-            }
-            HANDLE index
-            SET index, index + 1
-        }
-    }
-}
+$(ITERATE) "utils/nice.logi"
 
 SET @IS_IN_MANDELBROT, {dest, posX, posY
     SET @firstPosX, posX
