@@ -404,7 +404,7 @@ baseExpression_t *parseExpression(parser_t *parser, int8_t precedence) {
         }
     } else {
         bodyPosSkipOperator(bodyPos, tempOperator);
-        baseExpression_t *tempOperand = parseExpression(parser, 0);
+        baseExpression_t *tempOperand = parseExpression(parser, tempOperator->precedence);
         if (hasThrownError) {
             return NULL;
         }

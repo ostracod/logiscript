@@ -232,6 +232,7 @@ PRINT (10 + 20) * 30
 PRINT -10 + 20
 PRINT -(10 + 20)
 PRINT 2 * SIZE([10, 20, 30])
+PRINT !SET(TRUE)
 /// END
 /// RUN fileOne.logi
 /// EXPECT_OUTPUT
@@ -242,6 +243,7 @@ PRINT 2 * SIZE([10, 20, 30])
 10
 -30
 6
+0
 /// END
 /// EXPECT_EXIT_CODE 0
 

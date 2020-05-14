@@ -60,8 +60,7 @@ SET @WRITE, {hashTable, key, value
 }
 
 SET @DELETE, {hashTable, key
-    (hashTable[HASH_FUNCTION_INDEX]) @bucketIndex, key
-    SET @bucket, hashTable[BUCKET_LIST_INDEX][bucketIndex]
+    GET_BUCKET @bucket, hashTable, key
     SET @EQUAL_FUNCTION, hashTable[EQUAL_FUNCTION_INDEX]
     ITERATE 0, SIZE(bucket), {index
         SET @pair, bucket[index]

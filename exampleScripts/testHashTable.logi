@@ -1,7 +1,8 @@
 #!/usr/local/bin/logiscript
 
-$(FOR_EACH) "utils/nice.logi"
+$(ITERATE, IF_ELSE, FOR_EACH) "utils/nice.logi"
 $HASH_TABLE "utils/hashTable.logi"
+$MATH "utils/math.logi"
 
 SET @HASH_STRING, {dest, text
     SET dest, 0
@@ -14,10 +15,81 @@ SET @EQUAL_STRING, {dest, text1, text2
     SET dest, text1 == text2
 }
 
-SET @myHashTable, HASH_TABLE.CREATE(HASH_STRING, EQUAL_STRING, 20)
-HASH_TABLE.WRITE myHashTable, "Hello!", 10
-HASH_TABLE.WRITE myHashTable, "Very cool", 20
+SET @hashTable, HASH_TABLE.CREATE(HASH_STRING, EQUAL_STRING, 20)
 
-PRINT myHashTable
+PRINT "Enter a seed for random number generation:"
+MATH.SEED_RAND CONVERT(PROMPT(), NUMBER_TYPE)
+
+SET @CREATE_RANDOM_STRING, {dest
+    SET dest, ""
+    RESIZE dest, 3 + MATH.RAND() % 10
+    FOR_EACH dest, {character
+        SET character, 65 + MATH.RAND() % 26
+    }
+}
+
+SET @HAS_KEY, {dest, key
+    SET dest, FALSE
+    FOR_EACH keyValueList, {keyValue
+        IF keyValue != VOID, {
+            IF key == keyValue[0], {
+                SET dest, TRUE
+                THROW 1
+            }
+        }
+    }
+}
+
+PRINT "Generating test keys..."
+SET @keyValueList, []
+RESIZE keyValueList, 150
+FOR_EACH keyValueList, {keyValue
+    SET @key
+    CATCH @temp, 1, {
+        LOOP {
+            CREATE_RANDOM_STRING key
+            IF !HAS_KEY(key), {
+                THROW 1
+            }
+        }
+    }
+    SET keyValue, [key, VOID]
+}
+
+SET @MODIFY_RANDOM_KEY_VALUE, {
+    SET @index, MATH.RAND() % SIZE(keyValueList)
+    SET @keyValue, keyValueList[index]
+    IF_ELSE keyValue[1] != VOID && MATH.RAND() < 100, {
+        SET keyValue[1], VOID
+        HASH_TABLE.DELETE hashTable, keyValue[0]
+    }, {
+        SET keyValue[1], MATH.RAND()
+        HASH_TABLE.WRITE hashTable, keyValue[0], keyValue[1]
+    }
+}
+
+SET @VALIDATE_ALL_KEY_VALUES, {
+    FOR_EACH keyValueList, {keyValue
+        HASH_TABLE.READ @value, hashTable, keyValue[0]
+        IF value != keyValue[1], {
+            THROW ERROR_CHANNEL, [DATA_ERROR, "Expected value " + CONVERT(keyValue[1], STRING_TYPE) + " at key " + keyValue[0] + ", but found " + CONVERT(value, STRING_TYPE) + "."]
+        }
+    }
+}
+
+PRINT "Running test..."
+SET @maximumValidationCount, 100
+ITERATE 0, maximumValidationCount, {validationCount
+    ITERATE 0, 10, {modificationCount
+        MODIFY_RANDOM_KEY_VALUE
+    }
+    VALIDATE_ALL_KEY_VALUES
+    IF validationCount % 10 == 0, {
+        PRINT CONVERT(validationCount, STRING_TYPE) + " / " + CONVERT(maximumValidationCount, STRING_TYPE)
+    }
+}
+
+PRINT hashTable
+PRINT "Test passed!"
 
 
