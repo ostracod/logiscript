@@ -1,0 +1,23 @@
+#!/usr/local/bin/logiscript
+
+$(FOR_EACH) "utils/nice.logi"
+$HASH_TABLE "utils/hashTable.logi"
+
+SET @HASH_STRING, {dest, text
+    SET dest, 0
+    FOR_EACH text, {character
+        SET dest, dest + character
+    }
+}
+
+SET @EQUAL_STRING, {dest, text1, text2
+    SET dest, text1 == text2
+}
+
+SET @myHashTable, HASH_TABLE.CREATE(HASH_STRING, EQUAL_STRING, 20)
+HASH_TABLE.WRITE myHashTable, "Hello!", 10
+HASH_TABLE.WRITE myHashTable, "Very cool", 20
+
+PRINT myHashTable
+
+

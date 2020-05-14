@@ -23,4 +23,22 @@ SET @IF_ELSE, {condition, handle1, handle2
     IF !condition, handle2
 }
 
+SET @FOR_EACH, {elementList, HANDLE
+    ITERATE 0, SIZE(elementList), {index
+        HANDLE elementList[index]
+    }
+}
+
+SET @PUSH, {elementList, value
+    RESIZE elementList, SIZE(elementList) + 1
+    SET elementList[SIZE(elementList) - 1], value
+}
+
+SET @REMOVE, {elementList, index
+    ITERATE index, SIZE(elementList) - 1, {index
+        SET elementList[index], elementList[index + 1]
+    }
+    RESIZE elementList, SIZE(elementList) - 1
+}
+
 

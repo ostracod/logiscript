@@ -1,0 +1,75 @@
+
+$(ITERATE, IF_ELSE, FOR_EACH, PUSH, REMOVE) "utils/nice.logi"
+
+# Format of hash table:
+# [
+#     Hashing function,
+#     Equality function,
+#     List of buckets
+# ]
+# Each bucket is a list of [key, value] pairs.
+
+SET @HASH_FUNCTION_INDEX, 0
+SET @EQUAL_FUNCTION_INDEX, 1
+SET @BUCKET_LIST_INDEX, 2
+
+SET @CREATE, {dest, HASH_FUNCTION, EQUAL_FUNCTION, bucketAmount
+    SET @bucketList, []
+    RESIZE bucketList, bucketAmount
+    FOR_EACH bucketList, {bucket
+        SET bucket, []
+    }
+    SET dest, [HASH_FUNCTION, EQUAL_FUNCTION, bucketList]
+}
+
+SET @GET_BUCKET, {dest, hashTable, key
+    SET @bucketList, hashTable[BUCKET_LIST_INDEX]
+    (hashTable[HASH_FUNCTION_INDEX]) @bucketIndex, key
+    SET bucketIndex, bucketIndex % SIZE(bucketList)
+    SET dest, bucketList[bucketIndex]
+}
+
+SET @GET_PAIR, {bucketDest, pairDest, hashTable, key
+    GET_BUCKET bucketDest, hashTable, key
+    SET @EQUAL_FUNCTION, hashTable[EQUAL_FUNCTION_INDEX]
+    CATCH pairDest, 2, {
+        FOR_EACH bucketDest, {pair
+            IF EQUAL_FUNCTION(key, pair[0]), {
+                THROW 2, pair
+            }
+        }
+    }
+}
+
+SET @READ, {dest, hashTable, key
+    GET_PAIR @bucket, @pair, hashTable, key
+    IF_ELSE pair == VOID, {
+        SET dest, VOID
+    }, {
+        SET dest, pair[1]
+    }
+}
+
+SET @WRITE, {hashTable, key, value
+    GET_PAIR @bucket, @pair, hashTable, key
+    IF_ELSE pair == VOID, {
+        PUSH bucket, [key, value]
+    }, {
+        SET pair[1], value
+    }
+}
+
+SET @DELETE, {hashTable, key
+    (hashTable[HASH_FUNCTION_INDEX]) @bucketIndex, key
+    SET @bucket, hashTable[BUCKET_LIST_INDEX][bucketIndex]
+    SET @EQUAL_FUNCTION, hashTable[EQUAL_FUNCTION_INDEX]
+    ITERATE 0, SIZE(bucket), {index
+        SET @pair, bucket[index]
+        IF EQUAL_FUNCTION(key, pair[0]), {
+            REMOVE bucket, index
+            THROW 1
+        }
+    }
+}
+
+
