@@ -88,9 +88,9 @@ void throwBuiltInError(int32_t errorCode, int8_t *message) {
 void printBuiltInError(int32_t errorCode, int8_t *message) {
     errorConstant_t *tempErrorConstant = findErrorConstantByCode(errorCode);
     if (tempErrorConstant == NULL) {
-        printf("Uncaught error (code = %d): %s\n", errorCode, message);
+        fprintf(stderr, "Uncaught error (code = %d): %s\n", errorCode, message);
     } else {
-        printf("Uncaught %s: %s\n", tempErrorConstant->name, message);
+        fprintf(stderr, "Uncaught %s: %s\n", tempErrorConstant->name, message);
     }
 }
 
@@ -138,11 +138,11 @@ void printStackTrace() {
     if (!hasPrintedError) {
         value_t tempStringValue = convertValueToString(thrownErrorValue, false);
         int8_t *tempText = tempStringValue.heapValue->vector.data;
-        printf("Uncaught value (channel = %d): %s\n", thrownErrorChannel, tempText);
+        fprintf(stderr, "Uncaught value (channel = %d): %s\n", thrownErrorChannel, tempText);
     }
     for (int32_t index = 0; index < stackTracePosIndex; index++) {
         stackTracePos_t *tempPos = stackTracePosList + index;
-        printf("From line %" PRId64 " of %s\n", tempPos->lineNumber, tempPos->path);
+        fprintf(stderr, "From line %" PRId64 " of %s\n", tempPos->lineNumber, tempPos->path);
     }
 }
 
