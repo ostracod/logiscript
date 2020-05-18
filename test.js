@@ -33,8 +33,8 @@ let interpreterProcess;
 let interpreterClient;
 let interpreterHasExited;
 let receivedSocketData;
-let receivedStdoutData;
-let stdoutLineQueue;
+let receivedOutputData;
+let outputLineQueue;
 let receivedHeapCount;
 let activeTestCase;
 
@@ -108,17 +108,18 @@ function socketReceiveEvent() {
     handleReceivedPacket(packetData);
 }
 
-function stdoutReceiveEvent() {
+function receiveOutputData(data) {
+    receivedOutputData = Buffer.concat([receivedOutputData, data]);
     let startIndex = 0;
-    for (let index = 0; index < receivedStdoutData.length; index++) {
-        if (receivedStdoutData[index] == 10) {
-            let tempLine = receivedStdoutData.slice(startIndex, index).toString();
-            stdoutLineQueue.push(tempLine);
+    for (let index = 0; index < receivedOutputData.length; index++) {
+        if (receivedOutputData[index] == 10) {
+            let tempLine = receivedOutputData.slice(startIndex, index).toString();
+            outputLineQueue.push(tempLine);
             startIndex = index + 1;
         }
     }
     if (startIndex > 0) {
-        receivedStdoutData = receivedStdoutData.slice(startIndex, receivedStdoutData.length);
+        receivedOutputData = receivedOutputData.slice(startIndex, receivedOutputData.length);
     }
 }
 
@@ -132,8 +133,8 @@ function launchInterpreter() {
     
     interpreterHasExited = false;
     receivedSocketData = Buffer.alloc(0);
-    receivedStdoutData = Buffer.alloc(0);
-    stdoutLineQueue = [];
+    receivedOutputData = Buffer.alloc(0);
+    outputLineQueue = [];
     receivedHeapCount = null;
     
     interpreterProcess = childProcess.spawn(
@@ -141,10 +142,8 @@ function launchInterpreter() {
         ["--socket", socketPath]
     );
     
-    interpreterProcess.stdout.on("data", data => {
-        receivedStdoutData = Buffer.concat([receivedStdoutData, data]);
-        stdoutReceiveEvent();
-    });
+    interpreterProcess.stdout.on("data", receiveOutputData);
+    interpreterProcess.stderr.on("data", receiveOutputData);
     
     interpreterProcess.on("close", () => {
         interpreterHasExited = true;
@@ -287,8 +286,8 @@ class ReadLineAction extends RuntimeAction {
     
     perform() {
         return promiseIntervalWithTimeout("Read", (resolve, reject) => {
-            if (stdoutLineQueue.length > 0) {
-                this.receivedText = stdoutLineQueue.shift();
+            if (outputLineQueue.length > 0) {
+                this.receivedText = outputLineQueue.shift();
                 this.checkReceivedText();
                 resolve();
             } else if (interpreterHasExited) {
@@ -320,7 +319,7 @@ class ExpectOutputAction extends ReadLineAction {
     }
     
     getExpectedTextDescription() {
-        return `Expected stdout "${this.expectedText}"`;
+        return `Expected output "${this.expectedText}"`;
     }
 }
 
@@ -383,11 +382,11 @@ class ProvideInputAction extends RuntimeAction {
     
     perform() {
         return promiseIntervalWithTimeout("Prompt", (resolve, reject) => {
-            if (receivedStdoutData.length >= 2) {
-                if (receivedStdoutData[0] === 62 && receivedStdoutData[1] === 32) {
-                    receivedStdoutData = receivedStdoutData.slice(
+            if (receivedOutputData.length >= 2) {
+                if (receivedOutputData[0] === 62 && receivedOutputData[1] === 32) {
+                    receivedOutputData = receivedOutputData.slice(
                         2,
-                        receivedStdoutData.length
+                        receivedOutputData.length
                     );
                     interpreterProcess.stdin.write(this.text + "\n");
                     this.hasSucceeded = true;
@@ -464,25 +463,25 @@ class TestCase {
                 console.log(`Expected exit code ${this.expectedExitCode}, but received ${interpreterProcess.exitCode}.`);
                 nextHasSucceeded = false;
             }
-            let hasReceivedUnexpectedStdout = false;
+            let hasReceivedUnexpectedOutput = false;
             if (this.isExpectingStackTrace) {
-                if (stdoutLineQueue.length <= 0) {
+                if (outputLineQueue.length <= 0) {
                     console.log("Expected stack trace.");
                     nextHasSucceeded = false;
                 }
-                for (let line of stdoutLineQueue) {
+                for (let line of outputLineQueue) {
                     let tempResult = line.match(tracePosRegex);
                     if (tempResult === null) {
-                        hasReceivedUnexpectedStdout = true;
+                        hasReceivedUnexpectedOutput = true;
                         break;
                     }
                 }
-            } else if (stdoutLineQueue.length > 0) {
-                hasReceivedUnexpectedStdout = true;
+            } else if (outputLineQueue.length > 0) {
+                hasReceivedUnexpectedOutput = true;
             }
-            if (hasReceivedUnexpectedStdout) {
-                console.log("Received unexpected stdout:");
-                console.log(stdoutLineQueue.join("\n"));
+            if (hasReceivedUnexpectedOutput) {
+                console.log("Received unexpected output:");
+                console.log(outputLineQueue.join("\n"));
                 nextHasSucceeded = false;
             }
             let heapCountIsMissing = false;
